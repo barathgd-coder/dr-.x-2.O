@@ -1,0 +1,1561 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>RIY3.0 Hive</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Layout: full-bleed 3D stage with a glass HUD. Header on top, component list left,
+     inspector / AI / log right, vitals strip along the bottom. On phones the side panels
+     collapse into one bottom sheet driven by a tab bar. */
+  --bg:#04070b; --bg2:#0a131d;
+  --glass:rgba(10,18,29,.64); --glass2:rgba(20,34,50,.82);
+  --line:rgba(140,190,235,.15); --line2:rgba(110,220,255,.45);
+  --fg:#e7f1f9; --fg2:#a0b5c7; --fg3:#6a8296;
+  --accent:#3dd5ff; --accent-d:rgba(61,213,255,.13);
+  --ok:#4ef0a8; --warn:#ffb347; --crit:#ff5c70;
+  --display:'Rajdhani','Segoe UI',system-ui,sans-serif;
+  --body:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+  --gl:max(16px,env(safe-area-inset-left,0px)); --gr:max(16px,env(safe-area-inset-right,0px));
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 14px/1.45 var(--body);overflow:hidden;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#app{position:relative;width:100%;height:100%;overflow:hidden;background:radial-gradient(ellipse at 50% 38%,#0b1a28 0%,#04070b 70%)}
+#gl{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;outline:none;cursor:grab}
+#gl.drag{cursor:grabbing}#gl.hov{cursor:pointer}
+.vignette{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 45%,transparent 45%,rgba(2,4,8,.72) 100%)}
+.nogl{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:var(--fg2);padding:24px}
+
+/* glass */
+.glass{background:var(--glass);backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);border:1px solid var(--line);border-radius:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 18px 44px rgba(0,0,0,.42)}
+
+/* HUD grid */
+.hud{position:absolute;inset:0;padding:12px var(--gr) 12px var(--gl);pointer-events:none;display:grid;gap:12px;
+  grid-template-columns:262px minmax(0,1fr) 372px;grid-template-rows:auto minmax(0,1fr) auto}
+.hud>*{pointer-events:auto;min-width:0}
+.top{grid-column:1/-1;display:flex;align-items:center;gap:16px;padding:8px 12px;flex-wrap:wrap;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:10px}
+.mark{width:30px;height:30px;color:var(--accent);filter:drop-shadow(0 0 8px rgba(61,213,255,.6))}
+.bt{display:flex;flex-direction:column;line-height:1.05}
+.bt b{font:700 21px/1 var(--display);letter-spacing:.14em}
+.bt b em{font-style:normal;color:var(--accent)}
+.bt small{font:500 11px var(--body);color:var(--fg3);letter-spacing:.06em;margin-top:3px}
+.modes{display:flex;gap:4px;padding:3px;border-radius:11px;background:rgba(0,0,0,.28);border:1px solid var(--line)}
+.modes button{border:0;background:transparent;padding:7px 12px;border-radius:8px;font:600 13px var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--fg2);display:flex;gap:7px;align-items:center;transition:background .2s,color .2s}
+.modes button kbd{font:500 10px var(--mono);color:var(--fg3);border:1px solid var(--line);border-radius:4px;padding:0 4px}
+.modes button:hover{color:var(--fg);background:rgba(255,255,255,.05)}
+.modes button[aria-checked="true"]{background:var(--accent-d);color:var(--accent);box-shadow:inset 0 0 0 1px var(--line2)}
+.topr{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border-radius:99px;border:1px solid var(--line);background:rgba(0,0,0,.25);font:500 11px var(--mono);letter-spacing:.06em;color:var(--fg2);white-space:nowrap}
+button.chip:hover{border-color:var(--line2);color:var(--fg)}
+.chip .dot,.dot{width:7px;height:7px;border-radius:50%;background:var(--warn);box-shadow:0 0 8px currentColor;color:var(--warn);flex:none}
+.chip.live .dot{background:var(--ok);color:var(--ok)}
+.chip.ok .dot{background:var(--ok);color:var(--ok)}.chip.warn .dot{background:var(--warn);color:var(--warn)}.chip.crit .dot{background:var(--crit);color:var(--crit)}
+.ib{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.25);display:grid;place-items:center;color:var(--fg2);transition:.2s}
+.ib:hover{border-color:var(--line2);color:var(--accent);background:var(--accent-d)}
+.ib[aria-pressed="true"]{color:var(--accent);border-color:var(--line2)}
+.ib.off{color:var(--crit);border-color:rgba(255,92,112,.4)}
+.ib svg{width:18px;height:18px}
+
+/* panels */
+.sec{display:none;flex-direction:column;min-height:0;padding:12px 12px 10px}
+.sec.act{display:flex}
+@media(min-width:901px){#sec-parts,#sec-vitals{display:flex}}
+.sec h2{margin:0 0 8px;font:700 13px var(--display);letter-spacing:.16em;text-transform:uppercase;color:var(--fg3);display:flex;justify-content:space-between;align-items:center}
+.sbody{overflow:auto;min-height:0;scrollbar-width:thin;scrollbar-color:rgba(140,190,235,.25) transparent}
+#sec-parts{grid-column:1;grid-row:2;align-self:start;max-height:100%}
+#rightPanel{grid-column:3;grid-row:2;display:flex;flex-direction:column;min-height:0;padding:0;overflow:hidden}
+#rightPanel .sec{flex:1;border:0;background:none;box-shadow:none;backdrop-filter:none;border-radius:0}
+.rtabs{display:flex;padding:6px;gap:4px;border-bottom:1px solid var(--line)}
+.rtabs button,.mtabs button{flex:1;border:0;background:transparent;padding:8px 6px;border-radius:9px;font:600 13px var(--display);letter-spacing:.1em;text-transform:uppercase;color:var(--fg2);transition:.2s}
+.rtabs button:hover,.mtabs button:hover{color:var(--fg)}
+.rtabs button[aria-selected="true"],.mtabs button[aria-selected="true"]{background:var(--accent-d);color:var(--accent);box-shadow:inset 0 0 0 1px var(--line2)}
+.mobonly{display:none}
+.mtabs{display:none}
+
+/* parts list */
+#partList{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px}
+#partList button{width:100%;display:grid;grid-template-columns:10px 1fr auto;gap:10px;align-items:center;text-align:left;padding:8px 10px;border-radius:9px;border:1px solid transparent;background:transparent;transition:.18s}
+#partList button:hover{background:rgba(255,255,255,.05)}
+#partList button[aria-pressed="true"]{background:var(--accent-d);border-color:var(--line2)}
+#partList .pn{font:500 13px var(--body);color:var(--fg)}
+#partList .pt{font:500 10px var(--mono);color:var(--fg3);letter-spacing:.05em;text-transform:uppercase}
+#partList .dot{background:var(--fg3);color:var(--fg3);box-shadow:none}
+#partList .dot.ok{background:var(--ok);color:var(--ok);box-shadow:0 0 8px var(--ok)}
+#partList .dot.warn{background:var(--warn);color:var(--warn);box-shadow:0 0 8px var(--warn)}
+#partList .dot.crit{background:var(--crit);color:var(--crit);box-shadow:0 0 8px var(--crit)}
+.hint{font:400 12px var(--body);color:var(--fg3);margin:8px 2px 0}
+
+/* inspector */
+.ins-h{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:6px}
+.ins-h h3{margin:0;font:700 24px/1.1 var(--display);letter-spacing:.04em}
+.ins-tag{font:500 10px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.pill{display:inline-block;padding:2px 9px;border-radius:99px;font:600 11px var(--mono);letter-spacing:.05em;border:1px solid var(--line);color:var(--fg2)}
+.pill.ok{color:var(--ok);border-color:rgba(78,240,168,.4);background:rgba(78,240,168,.08)}
+.pill.warn{color:var(--warn);border-color:rgba(255,179,71,.45);background:rgba(255,179,71,.08)}
+.pill.crit{color:var(--crit);border-color:rgba(255,92,112,.5);background:rgba(255,92,112,.1)}
+.ins-p{margin:6px 0 10px;color:var(--fg2)}
+.spec{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;margin:0 0 12px;padding:10px 12px;border-radius:10px;background:rgba(0,0,0,.25);border:1px solid var(--line)}
+.spec dt{font:500 11px var(--mono);color:var(--fg3);letter-spacing:.04em;text-transform:uppercase;padding-top:2px}
+.spec dd{margin:0;font:400 13px var(--body);overflow-wrap:anywhere}
+.ro{display:flex;gap:16px;flex-wrap:wrap;margin:0 0 12px;padding:10px 12px;border-radius:10px;border:1px solid var(--line2);background:var(--accent-d)}
+.ro div{display:flex;flex-direction:column}.ro small{font:500 10px var(--mono);color:var(--fg3);letter-spacing:.06em;text-transform:uppercase}
+.ro b{font:500 22px var(--mono);font-variant-numeric:tabular-nums}.ro b i{font:400 12px var(--body);color:var(--fg2);font-style:normal;margin-left:3px}
+.acts{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:8px 13px;border-radius:9px;border:1px solid var(--line2);background:var(--accent-d);color:var(--accent);font:600 13px var(--display);letter-spacing:.08em;text-transform:uppercase;transition:.18s}
+.btn:hover{background:rgba(61,213,255,.24)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.ghost{border-color:var(--line);background:transparent;color:var(--fg2)}
+.btn.ghost:hover{color:var(--fg);border-color:var(--line2)}
+.frm{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px}
+.frm label{display:flex;flex-direction:column;gap:3px;font:500 10px var(--mono);color:var(--fg3);letter-spacing:.06em;text-transform:uppercase}
+.frm input,.in{background:rgba(0,0,0,.35);border:1px solid var(--line);border-radius:8px;padding:7px 9px;color:var(--fg);width:84px;font:400 14px var(--mono)}
+.frm input:focus,.in:focus{border-color:var(--line2);outline:none;box-shadow:0 0 0 3px var(--accent-d)}
+.bar{height:6px;border-radius:9px;background:rgba(255,255,255,.08);overflow:hidden;margin:4px 0 10px}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),#8fe8ff);transition:width .2s}
+.note{font:400 12px var(--body);color:var(--fg3);margin:4px 0 10px}
+
+/* vitals */
+#sec-vitals{grid-column:1/-1;grid-row:3;padding:10px}
+#sec-vitals h2{display:none}
+.vgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.tile{position:relative;padding:10px 12px 8px;border-radius:11px;border:1px solid var(--line);background:rgba(0,0,0,.22);text-align:left;display:flex;flex-direction:column;gap:2px;min-width:0;transition:border-color .2s,background .2s}
+.tile:hover{border-color:var(--line2);background:var(--accent-d)}
+.tile.sel{border-color:var(--accent)}
+.tile::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:3px;border-radius:0 3px 3px 0;background:var(--fg3);transition:background .3s}
+.tile.ok::before{background:var(--ok)}.tile.warn::before{background:var(--warn)}.tile.crit::before{background:var(--crit)}
+.tile .th{display:flex;justify-content:space-between;gap:6px;align-items:center}
+.tl{font:600 12px var(--display);letter-spacing:.12em;text-transform:uppercase;color:var(--fg2)}
+.srct{font:500 9px var(--mono);letter-spacing:.08em;padding:1px 5px;border-radius:4px;border:1px solid var(--line);color:var(--fg3)}
+.srct.demo{color:var(--warn);border-color:rgba(255,179,71,.4)}.srct.live{color:var(--ok);border-color:rgba(78,240,168,.4)}.srct.manual{color:var(--accent);border-color:var(--line2)}
+.tv{display:flex;align-items:baseline;gap:5px;font-variant-numeric:tabular-nums}
+.tv b{font:500 30px/1.1 var(--mono);letter-spacing:-.02em;transition:color .3s}
+.tv i{font:400 12px var(--body);font-style:normal;color:var(--fg2)}
+.tile.warn .tv b{color:var(--warn)}.tile.crit .tv b{color:var(--crit)}
+.tf{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.age{font:400 10px var(--mono);color:var(--fg3)}
+.spark{width:100%;height:34px;display:block;margin-top:2px}
+.flash{animation:flash .7s ease-out}
+@keyframes flash{0%{box-shadow:0 0 0 0 rgba(61,213,255,.7)}100%{box-shadow:0 0 0 14px rgba(61,213,255,0)}}
+
+/* view controls */
+.viewctl{grid-column:2;grid-row:2;align-self:end;justify-self:center;display:flex;gap:6px;padding:6px;border-radius:12px}
+.viewctl .ib{width:34px;height:34px}
+
+/* AI */
+.aihead{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.aistat{font:500 11px var(--mono);color:var(--fg2);letter-spacing:.04em}
+.qs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.qs button{padding:5px 10px;border-radius:99px;border:1px solid var(--line);background:rgba(0,0,0,.25);font:500 12px var(--body);color:var(--fg2);transition:.18s}
+.qs button:hover:not(:disabled){border-color:var(--line2);color:var(--accent)}
+.qs button:disabled{opacity:.4;cursor:not-allowed}
+#aiLog{display:flex;flex-direction:column;gap:10px;flex:1;min-height:90px}
+.msg{padding:9px 11px;border-radius:11px;border:1px solid var(--line);background:rgba(0,0,0,.25);font-size:13.5px;overflow-wrap:anywhere}
+.msg.u{background:var(--accent-d);border-color:var(--line2);align-self:flex-end;max-width:92%}
+.msg .mh{font:500 10px var(--mono);letter-spacing:.06em;color:var(--fg3);text-transform:uppercase;margin-bottom:4px;display:flex;justify-content:space-between;gap:8px}
+.msg ul{margin:4px 0;padding-left:18px}.msg p{margin:4px 0}
+.msg.err{border-color:rgba(255,92,112,.5)}
+.msg .ctx{margin-top:6px;font:400 10px var(--mono);color:var(--fg3)}
+.think{display:inline-flex;gap:4px;align-items:center;color:var(--accent);font:500 12px var(--mono)}
+.think i{width:5px;height:5px;border-radius:50%;background:var(--accent);animation:bl 1s infinite ease-in-out}
+.think i:nth-child(2){animation-delay:.15s}.think i:nth-child(3){animation-delay:.3s}
+@keyframes bl{0%,80%,100%{opacity:.25;transform:scale(.7)}40%{opacity:1;transform:scale(1)}}
+.aiin{display:flex;gap:6px;margin-top:8px}
+.aiin .in{flex:1;width:auto;font:400 13.5px var(--body)}
+
+/* log */
+#logList{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px;font:400 12px var(--mono)}
+#logList li{display:grid;grid-template-columns:62px 1fr;gap:8px;padding:4px 2px;border-bottom:1px solid rgba(140,190,235,.07)}
+#logList time{color:var(--fg3)}
+#logList li.warn span{color:var(--warn)}#logList li.crit span,#logList li.err span{color:var(--crit)}#logList li.ok span{color:var(--ok)}
+
+/* popovers, toasts */
+.pop{position:absolute;z-index:30;top:76px;right:var(--gr);width:min(330px,calc(100% - 32px));padding:14px;pointer-events:auto;background:var(--glass2)}
+.pop h3{margin:0 0 10px;font:700 14px var(--display);letter-spacing:.16em;text-transform:uppercase;color:var(--fg2)}
+.pop .row{display:grid;grid-template-columns:70px 1fr 34px;gap:10px;align-items:center;margin:8px 0;font:500 12px var(--mono);color:var(--fg2)}
+.pop .row output{text-align:right;color:var(--fg)}
+.pop input[type=range]{width:100%;accent-color:var(--accent)}
+.pop .opt{display:flex;gap:8px;align-items:center;margin:8px 0;font:400 13px var(--body)}
+.pop select{background:rgba(0,0,0,.4);border:1px solid var(--line);border-radius:8px;padding:6px 8px;width:100%}
+.pop kbd{font:500 11px var(--mono);border:1px solid var(--line);border-radius:4px;padding:0 5px;color:var(--fg)}
+.pop table{width:100%;border-collapse:collapse;font-size:12.5px}.pop td{padding:3px 0;color:var(--fg2)}.pop td:first-child{width:46%}
+#toasts{position:absolute;z-index:40;top:84px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:min(440px,calc(100% - 32px))}
+.toast{pointer-events:auto;padding:9px 14px;border-radius:11px;font:500 13px var(--body);display:flex;gap:9px;align-items:center;background:var(--glass2);border:1px solid var(--line2);backdrop-filter:blur(14px);animation:tin .35s cubic-bezier(.2,.9,.3,1.2);box-shadow:0 14px 34px rgba(0,0,0,.5)}
+.toast.ok{border-color:rgba(78,240,168,.55)}.toast.warn{border-color:rgba(255,179,71,.6)}.toast.err{border-color:rgba(255,92,112,.65)}
+.toast.out{opacity:0;transform:translateY(-8px);transition:.3s}
+@keyframes tin{from{opacity:0;transform:translateY(-14px) scale(.96)}}
+#tag{position:absolute;z-index:5;pointer-events:none;padding:4px 9px;border-radius:7px;border:1px solid var(--line2);background:var(--glass2);font:600 12px var(--display);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);white-space:nowrap;transform:translate(14px,-130%)}
+#tip{position:absolute;z-index:6;pointer-events:none;padding:3px 8px;border-radius:6px;background:rgba(5,10,16,.85);border:1px solid var(--line);font:500 11px var(--mono);color:var(--fg);transform:translate(14px,14px);white-space:nowrap}
+
+/* boot */
+#boot{position:absolute;inset:0;z-index:100;background:radial-gradient(ellipse at 50% 40%,#0b1b2b,#03060a 70%);display:flex;align-items:center;justify-content:center;padding:24px var(--gr) 24px var(--gl);transition:opacity .9s ease,visibility .9s}
+#boot.gone{opacity:0;visibility:hidden}
+.bootc{width:min(460px,100%);display:flex;flex-direction:column;gap:18px}
+.bootc .mark{width:56px;height:56px}
+.bootc h1{margin:0;font:700 clamp(34px,8vw,52px)/1 var(--display);letter-spacing:.2em}
+.bootc h1 em{font-style:normal;color:var(--accent)}
+.bootc p{margin:0;color:var(--fg2)}
+.bprog{height:3px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden}
+.bprog i{display:block;height:100%;width:0;background:var(--accent);box-shadow:0 0 14px var(--accent);transition:width .35s}
+#bootlog{font:400 12px/1.7 var(--mono);color:var(--fg3);min-height:112px;margin:0;padding:0;list-style:none}
+#bootlog li.done{color:var(--fg2)}#bootlog li.done::before{content:"✓ ";color:var(--ok)}#bootlog li.cur::before{content:"› ";color:var(--accent)}
+.bootbtn{display:none;gap:10px;flex-wrap:wrap}.bootbtn.show{display:flex}
+.bootbtn .btn{padding:11px 20px;font-size:15px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* tablet / phone */
+@media(max-width:1180px) and (min-width:901px){
+  .hud{grid-template-columns:220px minmax(0,1fr) 330px}
+  .modes button kbd{display:none}.bt small{display:none}
+  .vgrid{gap:7px}.tv b{font-size:25px}
+}
+@media(max-width:900px){
+  .hud{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto auto;gap:8px}
+  .top{gap:8px;padding:7px 9px}
+  .bt small{display:none}.bt b{font-size:18px}
+  .modes{order:3;width:100%}.modes button{flex:1;justify-content:center;padding:7px 4px;font-size:12px}.modes button kbd{display:none}
+  .chip{font-size:10px;padding:5px 9px}.ib{width:34px;height:34px}
+  #rightPanel{display:contents}
+  .rtabs{display:none}
+  .sec{grid-column:1;grid-row:3;max-height:40vh;overflow:hidden;background:var(--glass);backdrop-filter:blur(18px);border:1px solid var(--line);border-radius:14px}
+  #rightPanel .sec{background:var(--glass);border:1px solid var(--line);border-radius:14px;flex:none}
+  #sec-parts{align-self:auto}
+  .viewctl{grid-column:1;grid-row:2;justify-self:end;align-self:end;flex-direction:column;padding:4px}
+  .mtabs{display:flex;grid-row:4;grid-column:1;padding:4px;gap:2px}
+  .mtabs button{padding:8px 2px;font-size:11.5px;letter-spacing:.06em}
+  .vgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  #sec-vitals .vgrid .tile:last-child{grid-column:1/-1}
+  .tv b{font-size:24px}.spark{height:26px}
+  #toasts{top:132px}.pop{top:128px}
+}
+@media(max-width:380px){.mtabs button{font-size:10.5px}.chip#stChip{display:none}}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+
+<div id="app">
+  <canvas id="gl" tabindex="0" role="application" aria-label="Interactive 3D model of the Dr. X health assistant. Drag to rotate, scroll or pinch to zoom, right-drag or two fingers to pan. Press Enter to cycle components."></canvas>
+  <div class="vignette"></div>
+  <div id="tag" hidden></div>
+  <div id="tip" hidden></div>
+
+  <div class="hud">
+    <header class="top glass">
+      <div class="brand">
+        <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 28S4 20.5 4 12.2A6.7 6.7 0 0 1 16 8.4a6.7 6.7 0 0 1 12 3.8C28 20.5 16 28 16 28Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6 16h6l2-4 3 8 2-4h7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="bt"><b>RIY3.0 <em>HIVE</em></b><small>Dr. X Smart Health Assistant</small></div>
+      </div>
+      <div class="modes" role="radiogroup" aria-label="Visual mode">
+        <button role="radio" aria-checked="true" data-mode="exterior"><kbd>1</kbd>Exterior</button>
+        <button role="radio" aria-checked="false" data-mode="internals"><kbd>2</kbd>Internals</button>
+        <button role="radio" aria-checked="false" data-mode="xray"><kbd>3</kbd>X-ray</button>
+        <button role="radio" aria-checked="false" data-mode="signal"><kbd>4</kbd>Signal</button>
+      </div>
+      <div class="topr">
+        <span id="stChip" class="chip ok" role="status"><i class="dot"></i><span id="stTxt">All in range</span></span>
+        <button id="btnSrc" class="chip" aria-haspopup="dialog" aria-expanded="false" title="Data source"><i class="dot"></i><span id="srcTxt">DEMO DATA</span></button>
+        <button id="btnAudio" class="ib" aria-haspopup="dialog" aria-expanded="false" aria-label="Sound settings" title="Sound settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path id="spkWave" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"/></svg></button>
+        <button id="btnHelp" class="ib" aria-haspopup="dialog" aria-expanded="false" aria-label="Controls and shortcuts" title="Controls"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.6 2.6 0 1 1 3.6 2.4c-.7.4-1.1.9-1.1 1.7M12 17h.01"/></svg></button>
+        <button id="btnPower" class="ib" aria-pressed="true" aria-label="Device power" title="Device power"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 3v8M6.4 6.6a8 8 0 1 0 11.2 0"/></svg></button>
+      </div>
+    </header>
+
+    <aside id="sec-parts" class="sec glass act" aria-label="Components">
+      <h2>Components <span id="partCount" class="ins-tag"></span></h2>
+      <div class="sbody"><ul id="partList"></ul><p class="hint">Select a part here or tap it in the 3D view. Internal parts open the case.</p></div>
+    </aside>
+
+    <div id="rightPanel" class="glass">
+      <div class="rtabs" role="tablist" aria-label="Panels">
+        <button role="tab" data-tab="inspect" aria-selected="true">Inspect</button>
+        <button role="tab" data-tab="ai" aria-selected="false">Dr. X AI</button>
+        <button role="tab" data-tab="log" aria-selected="false">Log</button>
+      </div>
+      <section id="sec-inspect" class="sec act" aria-label="Inspector"><div class="sbody" id="inspect"></div></section>
+      <section id="sec-ai" class="sec" aria-label="Dr. X AI">
+        <div class="aihead"><span class="dot" id="aiDot" style="background:var(--fg3);color:var(--fg3)"></span><span class="aistat" id="aiStat">Checking AI link…</span></div>
+        <div class="qs" id="aiQs"></div>
+        <div class="sbody" id="aiScroll" style="flex:1"><div id="aiLog" aria-live="polite"></div></div>
+        <form class="aiin" id="aiForm"><label class="sr" for="aiText">Ask about your readings or the hardware</label><input id="aiText" class="in" autocomplete="off" placeholder="Ask about readings, trends or hardware"><button class="btn" id="aiSend" type="submit">Ask</button><button class="btn ghost" id="aiStop" type="button" hidden>Stop</button></form>
+      </section>
+      <section id="sec-log" class="sec" aria-label="Event log">
+        <h2>Event log <button class="btn ghost" id="logClear" style="padding:3px 9px;font-size:11px">Clear</button></h2>
+        <div class="sbody"><ul id="logList"></ul></div>
+      </section>
+    </div>
+
+    <section id="sec-vitals" class="sec glass" aria-label="Live vitals"><h2>Vitals</h2><div class="vgrid" id="vgrid"></div></section>
+
+    <div class="viewctl glass" role="toolbar" aria-label="Camera">
+      <button class="ib" id="vcReset" aria-label="Reset view" title="Reset view (0)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.5-5.8M4 4v4h4"/></svg></button>
+      <button class="ib" id="vcSpin" aria-pressed="true" aria-label="Auto-rotate" title="Auto-rotate (R)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="12" rx="9" ry="4"/><path d="M12 3v3M12 18v3"/></svg></button>
+      <button class="ib" id="vcIn" aria-label="Zoom in" title="Zoom in (+)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button class="ib" id="vcOut" aria-label="Zoom out" title="Zoom out (−)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12h14"/></svg></button>
+    </div>
+
+    <nav class="mtabs glass" role="tablist" aria-label="Panels">
+      <button role="tab" data-tab="vitals" aria-selected="true">Vitals</button>
+      <button role="tab" data-tab="parts" aria-selected="false">Parts</button>
+      <button role="tab" data-tab="inspect" aria-selected="false">Inspect</button>
+      <button role="tab" data-tab="ai" aria-selected="false">AI</button>
+      <button role="tab" data-tab="log" aria-selected="false">Log</button>
+    </nav>
+  </div>
+
+  <div id="srcPop" class="pop glass" role="dialog" aria-label="Data source" hidden>
+    <h3>Data source</h3>
+    <div class="opt"><span class="dot" id="srcDot"></span><span id="srcDesc" style="flex:1"></span></div>
+    <div class="opt" id="scnWrap"><label for="scn" style="min-width:68px;font:500 11px var(--mono);color:var(--fg3)">SCENARIO</label>
+      <select id="scn"><option value="rest">Resting</option><option value="fever">Fever</option><option value="hypoxia">Low SpO₂</option><option value="hyper">High BP and glucose</option></select></div>
+    <div class="acts"><button class="btn" id="btnLink">Connect device</button><button class="btn ghost" id="btnUnlink" hidden>Disconnect</button></div>
+    <p class="note" id="linkNote">Demo data is generated by this page so the scene and AI have something to work with. Link an ESP32 over USB to replace it with real readings.</p>
+  </div>
+  <div id="audPop" class="pop glass" role="dialog" aria-label="Sound settings" hidden>
+    <h3>Sound</h3>
+    <div class="row"><label for="vMaster">Master</label><input id="vMaster" type="range" min="0" max="100"><output id="oMaster"></output></div>
+    <div class="row"><label for="vMusic">Music</label><input id="vMusic" type="range" min="0" max="100"><output id="oMusic"></output></div>
+    <div class="row"><label for="vFx">Effects</label><input id="vFx" type="range" min="0" max="100"><output id="oFx"></output></div>
+    <div class="opt"><input type="checkbox" id="vMute"><label for="vMute">Mute everything</label></div>
+    <div class="opt"><input type="checkbox" id="vBeat"><label for="vBeat">Heartbeat tick follows heart rate</label></div>
+    <p class="note" id="audNote">Sound starts after you enter. Effects are positioned in 3D around the model.</p>
+  </div>
+  <div id="helpPop" class="pop glass" role="dialog" aria-label="Controls" hidden>
+    <h3>Controls</h3>
+    <table><tbody>
+      <tr><td>Rotate</td><td>Drag, or arrow keys</td></tr>
+      <tr><td>Zoom</td><td>Scroll, pinch, <kbd>+</kbd> <kbd>−</kbd></td></tr>
+      <tr><td>Pan</td><td>Right-drag, Shift-drag, two fingers</td></tr>
+      <tr><td>Select part</td><td>Click it, or <kbd>Enter</kbd> to cycle</td></tr>
+      <tr><td>Modes</td><td><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd></td></tr>
+      <tr><td>Reset view</td><td><kbd>0</kbd></td></tr>
+      <tr><td>Auto-rotate</td><td><kbd>R</kbd></td></tr>
+      <tr><td>Mute</td><td><kbd>M</kbd></td></tr>
+      <tr><td>Deselect</td><td><kbd>Esc</kbd></td></tr>
+    </tbody></table>
+    <p class="note">The on-screen buttons in the 3D display (Ask AI, Health Records, Settings) are clickable.</p>
+  </div>
+  <div id="toasts" role="status" aria-live="polite"></div>
+
+  <div id="boot" role="dialog" aria-label="Loading RIY3.0 Hive">
+    <div class="bootc">
+      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 28S4 20.5 4 12.2A6.7 6.7 0 0 1 16 8.4a6.7 6.7 0 0 1 12 3.8C28 20.5 16 28 16 28Z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M6 16h6l2-4 3 8 2-4h7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <h1>RIY3.0 <em>HIVE</em></h1>
+      <p>Interactive 3D workbench for the Dr. X Smart Health Assistant.</p>
+      <div class="bprog"><i id="bprog"></i></div>
+      <ul id="bootlog" aria-live="polite"></ul>
+      <div class="bootbtn" id="bootbtn"><button class="btn" id="enter">Enter Hive</button><button class="btn ghost" id="enterQuiet">Enter without sound</button></div>
+    </div>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ---------- Core: state, component data, thresholds ---------- */
+const $ = (s, r) => (r || document).querySelector(s);
+const $$ = (s, r) => [...(r || document).querySelectorAll(s)];
+const el = (t, c, txt) => { const e = document.createElement(t); if (c) e.className = c; if (txt != null) e.textContent = txt; return e; };
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const store = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+
+const SCEN = {
+  rest:    { temp: 36.7, hr: 72,  spo2: 98, sys: 118, dia: 76, glu: 96,  label: 'Resting' },
+  fever:   { temp: 38.4, hr: 104, spo2: 96, sys: 128, dia: 82, glu: 104, label: 'Fever' },
+  hypoxia: { temp: 36.9, hr: 98,  spo2: 91, sys: 126, dia: 80, glu: 100, label: 'Low SpO₂' },
+  hyper:   { temp: 36.8, hr: 88,  spo2: 97, sys: 152, dia: 96, glu: 214, label: 'High BP and glucose' }
+};
+const now0 = Date.now();
+const S = {
+  power: true, mode: 'exterior', sel: null, source: 'demo', scen: 'rest', serial: null,
+  v: {
+    temp: { val: 36.8, src: 'demo', ts: now0 }, hr: { val: 72, src: 'demo', ts: now0 }, spo2: { val: 98, src: 'demo', ts: now0 },
+    bp: { sys: 120, dia: 80, src: 'demo', ts: now0 }, glu: { val: 98, src: 'demo', ts: now0 }
+  },
+  bat: null,
+  hist: { temp: [], hr: [], spo2: [], bp: [], glu: [] },
+  lv: { temp: 'ok', hr: 'ok', spo2: 'ok', bp: 'ok', glu: 'ok' }, worst: 'ok',
+  bpRun: null, log: []
+};
+
+const METRICS = [
+  { k: 'temp', label: 'Body temperature', unit: '°C', part: 'mlx90614' },
+  { k: 'hr', label: 'Heart rate', unit: 'bpm', part: 'max30102' },
+  { k: 'spo2', label: 'SpO₂', unit: '%', part: 'max30102' },
+  { k: 'bp', label: 'Blood pressure', unit: 'mmHg', part: 'cuff' },
+  { k: 'glu', label: 'Blood glucose', unit: 'mg/dL', part: 'glucose' }
+];
+
+/* Rule-based screening thresholds. These are plain comparisons, not AI output and not a diagnosis. */
+function classify(k, v) {
+  switch (k) {
+    case 'temp': return v >= 39 || v < 35 ? 'crit' : (v >= 37.8 || v < 36 ? 'warn' : 'ok');
+    case 'hr': return v > 130 || v < 45 ? 'crit' : (v > 110 || v < 50 ? 'warn' : 'ok');
+    case 'spo2': return v < 90 ? 'crit' : (v < 94 ? 'warn' : 'ok');
+    case 'bp': return (v.sys >= 180 || v.dia >= 120 || v.sys < 80) ? 'crit' : (v.sys >= 140 || v.dia >= 90 || v.sys < 90) ? 'warn' : 'ok';
+    case 'glu': return v < 54 || v > 300 ? 'crit' : (v < 70 || v > 180 ? 'warn' : 'ok');
+  }
+  return 'ok';
+}
+const LVTXT = { ok: 'In range', warn: 'Check', crit: 'Urgent' };
+
+const PARTS = {
+  screen: { name: 'Main display', tag: 'Interface', order: 1,
+    blurb: 'The front touch panel shows the same readings as this page. The Ask AI, Health Records and Settings buttons drawn on it are live: click them in the 3D view.',
+    specs: [['Content', 'Dr. X home screen: temperature, heart rate, blood pressure, glucose'], ['Panel model', 'Not listed in the component sheet']] },
+  esp32: { name: 'ESP32 controller', tag: 'Controller', order: 2, internal: true,
+    blurb: 'Main microcontroller. It polls the I²C sensors, drives the displays and buzzer, and reports readings over Wi-Fi or USB serial.',
+    specs: [['CPU', 'Dual-core Xtensa LX6, up to 240 MHz'], ['Radio', 'Wi-Fi 802.11 b/g/n and Bluetooth, built in'], ['Logic level', '3.3 V'], ['Default I²C', 'GPIO21 (SDA), GPIO22 (SCL)'], ['Link to Hive', 'USB serial, JSON lines at 115200 baud']],
+    ask: 'Explain what the ESP32 does in this device and which buses it uses.' },
+  max30102: { name: 'MAX30102 pulse oximeter', tag: 'Sensor', order: 3, internal: true, metric: ['hr', 'spo2'],
+    blurb: 'Optical sensor with red and infrared LEDs. The finger-tip reflection is used to estimate heart rate and blood oxygen saturation.',
+    specs: [['Measures', 'Heart rate, SpO₂'], ['Interface', 'I²C, address 0x57'], ['LED supply', '3.3 V (core 1.8 V)'], ['Mounting', 'Behind the finger window, left side']],
+    ask: 'How does the MAX30102 measure heart rate and SpO2, and what affects its accuracy?' },
+  mlx90614: { name: 'MLX90614 IR thermometer', tag: 'Sensor', order: 4, metric: ['temp'],
+    blurb: 'Contactless infrared thermometer. It reports object and ambient temperature through the lens barrel on the left side.',
+    specs: [['Measures', 'Body surface temperature (object) and ambient'], ['Interface', 'I²C / SMBus, default address 0x5A'], ['Object range', '−70 to 380 °C'], ['Supply', '3.3 V (BCC variant) or 5 V (ACC variant)']],
+    ask: 'How does the MLX90614 infrared thermometer work and what should the user do to get a reliable body temperature reading?' },
+  oled: { name: 'OLED heart rate and SpO₂ display', tag: 'Display', order: 5, metric: ['hr', 'spo2'],
+    blurb: 'Small monochrome display on the left side showing heart rate and SpO₂ at a glance, mirrored from the sensor readings.',
+    specs: [['Size', '0.96 in or 1.3 in (BOM lists both)'], ['Controller', 'SSD1306 class, 128×64'], ['Interface', 'I²C, address 0x3C (0x3D alternate)'], ['Supply', '3.3 V']],
+    ask: 'Describe the OLED display on the Dr. X device and its I2C address.' },
+  cuff: { name: 'Blood pressure cuff', tag: 'Sensor', order: 6, metric: ['bp'],
+    blurb: 'Upper-arm style cuff. The pump inflates it, then pressure oscillations during slow deflation give systolic and diastolic estimates.',
+    specs: [['Method', 'Oscillometric'], ['Measures', 'Systolic, diastolic (mmHg)'], ['Pump / valve / pressure sensor', 'Models not named in the component sheet']],
+    ask: 'Explain the oscillometric blood pressure measurement used by the cuff and common sources of error.' },
+  glucose: { name: 'Glucose meter', tag: 'Sensor', order: 7, metric: ['glu'],
+    blurb: 'A commercial strip-based meter docked on the right. It needs a test strip, so readings are logged into Hive by hand unless your firmware reads the meter.',
+    specs: [['Measures', 'Capillary blood glucose (mg/dL)'], ['Input to Hive', 'Manual entry, or device JSON field "glu"'], ['Consumable', 'Test strips']],
+    ask: 'What should the user know about blood glucose meter accuracy and strip handling?' },
+  battery: { name: 'Li-ion battery', tag: 'Power', order: 8, internal: true,
+    blurb: 'Single-cell lithium-ion pack that keeps the device running without the USB-C supply.',
+    specs: [['Nominal voltage', '3.7 V'], ['Charge level', 'Shown only if the firmware sends a "bat" field'], ['Charger / protection circuit', 'Not shown in the component sheet']],
+    ask: 'What does a 3.7 V Li-ion battery need to run safely in this device (charging, protection, regulation)?' },
+  buzzer: { name: 'Alert buzzer', tag: 'Output', order: 9, internal: true,
+    blurb: 'Sounds when a reading leaves its safe range. Use Test buzzer to hear it positioned where it sits inside the case.',
+    specs: [['Drive', 'GPIO through a transistor'], ['Role', 'Audible alerts']], ask: 'How should the buzzer be wired and driven from an ESP32?' },
+  wifi: { name: 'ESP8266 Wi-Fi module', tag: 'Comms', order: 10, internal: true,
+    blurb: 'Separate Wi-Fi module listed in the component sheet. The ESP32 already has Wi-Fi, so this is redundant unless it is used as a dedicated network co-processor.',
+    specs: [['Interface', 'UART (3.3 V)'], ['Standard', 'Wi-Fi 802.11 b/g/n'], ['Design note', 'Overlaps with the ESP32 radio']],
+    ask: 'Is the ESP8266 module redundant given the ESP32 in this design? When would both make sense?' },
+  antenna: { name: 'External Wi-Fi antenna', tag: 'Comms', order: 11,
+    blurb: 'Rod antenna on the back wall for better range. Connects through an SMA connector.',
+    specs: [['Connector', 'SMA'], ['Band', '2.4 GHz'], ['Note', 'The ESP32 dev board has a PCB antenna; an external one needs a board with a U.FL / IPEX socket']],
+    ask: 'Can an external antenna be used with the ESP32 board in this design?' },
+  power: { name: 'Power and ports', tag: 'Power', order: 12,
+    blurb: 'USB-C supply input, USB-A port, status LED and the main power button on the front.',
+    specs: [['Supply', '5 V USB-C'], ['Ports', 'USB-C, USB-A, 3.5 mm style jack'], ['LED', 'Green when powered']] },
+  enclosure: { name: 'Enclosure', tag: 'Case', order: 13,
+    blurb: 'White two-part case. The top shell lifts away in Internals mode; X-ray mode makes it transparent.',
+    specs: [['Parts', 'Base tray, top shell'], ['Fasteners', 'Screws and brass standoffs'], ['Board mounting', 'Standoffs, prototype PCB']] }
+};
+const PART_ORDER = Object.keys(PARTS).sort((a, b) => PARTS[a].order - PARTS[b].order);
+/* ---------- Audio: synthesized with Web Audio, no asset downloads ---------- */
+const HAudio = (() => {
+  let ctx = null, master, musicBus, fxBus, comp, noiseBuf, amb = null, pingTimer = 0, duck = 1;
+  const vol = { master: .7, music: .5, fx: .8, mute: false, beat: false };
+  try { Object.assign(vol, JSON.parse(localStorage.getItem('hive.audio') || '{}')); } catch (e) {}
+  const save = () => { try { localStorage.setItem('hive.audio', JSON.stringify(vol)); } catch (e) {} };
+  const last = {}; let active = 0;
+  const MIN_GAP = { hover: 70, click: 40, select: 90, beat: 120, default: 60 };
+  const MAX_VOICES = 14;
+
+  function ensure() {
+    if (ctx) return ctx;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    try { ctx = new AC(); } catch (e) { return null; }
+    master = ctx.createGain(); musicBus = ctx.createGain(); fxBus = ctx.createGain();
+    comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4;
+    musicBus.connect(master); fxBus.connect(master); master.connect(comp); comp.connect(ctx.destination);
+    const n = ctx.sampleRate * 2; noiseBuf = ctx.createBuffer(1, n, ctx.sampleRate);
+    const d = noiseBuf.getChannelData(0); for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    apply(true);
+    return ctx;
+  }
+  function apply(now) {
+    if (!ctx) return; const t = ctx.currentTime, k = now ? 0.001 : 0.06;
+    master.gain.setTargetAtTime(vol.mute ? 0 : Math.pow(vol.master, 1.6), t, k);
+    musicBus.gain.setTargetAtTime(Math.pow(vol.music, 1.6) * duck, t, k * 4);
+    fxBus.gain.setTargetAtTime(Math.pow(vol.fx, 1.6), t, k);
+  }
+  async function resume() { const c = ensure(); if (c && c.state !== 'running') { try { await c.resume(); } catch (e) {} } return !!c && c.state === 'running'; }
+
+  function listener(cam) {
+    if (!ctx) return; const L = ctx.listener, p = cam.position;
+    const f = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion), u = new THREE.Vector3(0, 1, 0).applyQuaternion(cam.quaternion);
+    if (L.positionX) {
+      const t = ctx.currentTime;
+      L.positionX.setValueAtTime(p.x, t); L.positionY.setValueAtTime(p.y, t); L.positionZ.setValueAtTime(p.z, t);
+      L.forwardX.setValueAtTime(f.x, t); L.forwardY.setValueAtTime(f.y, t); L.forwardZ.setValueAtTime(f.z, t);
+      L.upX.setValueAtTime(u.x, t); L.upY.setValueAtTime(u.y, t); L.upZ.setValueAtTime(u.z, t);
+    } else { L.setPosition(p.x, p.y, p.z); L.setOrientation(f.x, f.y, f.z, u.x, u.y, u.z); }
+  }
+  function dest(pos, bus) {
+    const b = bus || fxBus; if (!pos) return b;
+    const p = ctx.createPanner(); p.panningModel = 'HRTF'; p.distanceModel = 'inverse';
+    p.refDistance = 7; p.rolloffFactor = .7; p.maxDistance = 60;
+    if (p.positionX) { p.positionX.value = pos.x; p.positionY.value = pos.y; p.positionZ.value = pos.z; } else p.setPosition(pos.x, pos.y, pos.z);
+    p.connect(b); return p;
+  }
+  function tone(o, d) {
+    const t0 = ctx.currentTime + (o.t0 || 0), dur = o.dur || .15, g = ctx.createGain(), os = ctx.createOscillator();
+    os.type = o.type || 'sine'; os.frequency.setValueAtTime(o.f0, t0);
+    if (o.f1) os.frequency.exponentialRampToValueAtTime(Math.max(20, o.f1), t0 + dur);
+    const a = o.attack || .006, peak = o.gain || .1;
+    g.gain.setValueAtTime(.0001, t0); g.gain.exponentialRampToValueAtTime(peak, t0 + a);
+    g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
+    let n = os; if (o.lp) { const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = o.lp; os.connect(f); n = f; }
+    n.connect(g); g.connect(d); os.start(t0); os.stop(t0 + dur + .05);
+  }
+  function noise(o, d) {
+    const t0 = ctx.currentTime + (o.t0 || 0), dur = o.dur || .3, s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true;
+    const f = ctx.createBiquadFilter(); f.type = o.type || 'bandpass'; f.Q.value = o.q || 1;
+    f.frequency.setValueAtTime(o.f0, t0); if (o.f1) f.frequency.exponentialRampToValueAtTime(o.f1, t0 + dur);
+    const g = ctx.createGain(); g.gain.setValueAtTime(.0001, t0); g.gain.exponentialRampToValueAtTime(o.gain || .1, t0 + (o.attack || dur * .3));
+    g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
+    s.connect(f); f.connect(g); g.connect(d); s.start(t0, Math.random()); s.stop(t0 + dur + .05);
+  }
+  const SFX = {
+    hover: (d) => tone({ f0: 2300, dur: .03, gain: .025 }, d),
+    click: (d) => { tone({ f0: 900, f1: 1500, dur: .07, gain: .16 }, d); tone({ f0: 2400, dur: .03, gain: .04, type: 'triangle' }, d); },
+    select: (d) => { tone({ f0: 520, dur: .12, gain: .15 }, d); tone({ f0: 780, dur: .22, t0: .07, gain: .14 }, d); tone({ f0: 1560, dur: .3, t0: .07, gain: .04, type: 'triangle' }, d); },
+    deselect: (d) => tone({ f0: 700, f1: 420, dur: .14, gain: .11 }, d),
+    mode: (d) => { noise({ dur: .75, f0: 300, f1: 4200, q: 1.3, gain: .22 }, d); tone({ f0: 180, f1: 760, dur: .6, gain: .1, type: 'sawtooth', lp: 1800 }, d); tone({ f0: 1200, dur: .25, t0: .55, gain: .08 }, d); },
+    startup: (d) => { [220, 330, 440, 660, 880].forEach((f, i) => tone({ f0: f, dur: 1, t0: i * .15, gain: .1, attack: .03 }, d)); tone({ f0: 55, f1: 110, dur: 2, gain: .28 }, d); noise({ dur: 1.6, f0: 200, f1: 6000, q: .7, gain: .1 }, d); },
+    shutdown: (d) => { tone({ f0: 660, f1: 70, dur: 1.5, gain: .18, type: 'triangle' }, d); tone({ f0: 330, f1: 50, dur: 1.7, gain: .16 }, d); noise({ dur: 1.2, f0: 4000, f1: 150, q: .8, gain: .09 }, d); },
+    aiOn: (d) => [660, 880, 1320].forEach((f, i) => tone({ f0: f, dur: .2, t0: i * .07, gain: .08 }, d)),
+    aiDone: (d) => { tone({ f0: 988, dur: .4, gain: .1 }, d); tone({ f0: 1480, dur: .55, t0: .09, gain: .08 }, d); },
+    success: (d) => { tone({ f0: 660, dur: .14, gain: .12 }, d); tone({ f0: 830, dur: .3, t0: .1, gain: .12 }, d); },
+    warn: (d) => [0, .24].forEach(t => tone({ f0: 620, dur: .17, t0: t, gain: .14, type: 'triangle' }, d)),
+    alarm: (d) => [0, .17, .34].forEach(t => tone({ f0: 980, dur: .12, t0: t, gain: .14, type: 'square', lp: 2600 }, d)),
+    error: (d) => [0, .22].forEach(t => tone({ f0: 160, f1: 110, dur: .17, t0: t, gain: .2, type: 'sawtooth', lp: 700 }, d)),
+    buzzer: (d) => [0, .2, .4].forEach(t => tone({ f0: 2700, dur: .12, t0: t, gain: .1, type: 'square', lp: 4200 }, d)),
+    cuff: (d) => { for (let i = 0; i < 9; i++) { noise({ dur: .3, t0: i * .5, f0: 260, q: 2, gain: .1, attack: .06 }, d); tone({ f0: 70, dur: .2, t0: i * .5, gain: .1 }, d); } },
+    release: (d) => noise({ dur: 2.2, f0: 5200, f1: 900, q: .6, gain: .11, attack: .15 }, d),
+    beat: (d) => { tone({ f0: 75, f1: 45, dur: .12, gain: .22 }, d); tone({ f0: 62, f1: 40, dur: .12, t0: .13, gain: .1 }, d); }
+  };
+  function sfx(name, pos) {
+    if (!ctx || ctx.state !== 'running' || vol.mute || !SFX[name]) return;
+    const now = performance.now(), gap = MIN_GAP[name] || MIN_GAP.default;
+    if (last[name] && now - last[name] < gap) return;
+    if (active >= MAX_VOICES && name !== 'startup' && name !== 'shutdown' && name !== 'alarm') return;
+    last[name] = now; active++;
+    const d = dest(pos);
+    try { SFX[name](d); } catch (e) {}
+    setTimeout(() => { active = Math.max(0, active - 1); if (d !== fxBus) try { d.disconnect(); } catch (e) {} }, 4800);
+  }
+  function startAmbient() {
+    if (!ctx || amb) return;
+    const out = ctx.createGain(); out.gain.value = 0; out.connect(musicBus); out.gain.setTargetAtTime(1, ctx.currentTime, 1.4);
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 700; lp.Q.value = .5; lp.connect(out);
+    const nodes = [];
+    [55, 82.41, 110, 164.81, 220].forEach((f, i) => [-7, 7].forEach(det => {
+      const o = ctx.createOscillator(); o.type = i % 2 ? 'sawtooth' : 'triangle'; o.frequency.value = f; o.detune.value = det;
+      const g = ctx.createGain(); g.gain.value = .05 / (1 + i * .45); o.connect(g); g.connect(lp); o.start(); nodes.push(o);
+    }));
+    const lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.frequency.value = .06; lg.gain.value = 260; lfo.connect(lg); lg.connect(lp.frequency); lfo.start(); nodes.push(lfo);
+    const ns = ctx.createBufferSource(); ns.buffer = noiseBuf; ns.loop = true;
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 850; bp.Q.value = .4;
+    const ng = ctx.createGain(); ng.gain.value = .014; ns.connect(bp); bp.connect(ng); ng.connect(out); ns.start(); nodes.push(ns);
+    amb = { out, lp, nodes };
+    const ping = () => {
+      if (!amb) return;
+      if (ctx.state === 'running' && !vol.mute && duck > .5) {
+        const a = Math.random() * Math.PI * 2, p = new THREE.Vector3(Math.cos(a) * 7, 2 + Math.random() * 3, Math.sin(a) * 7);
+        const d = dest(p, musicBus), f = [880, 1318.5, 1760, 1174.7][Math.floor(Math.random() * 4)];
+        tone({ f0: f, dur: 2.6, gain: .035, attack: .02 }, d); tone({ f0: f * 2.01, dur: 1.6, gain: .012 }, d);
+        setTimeout(() => { try { d.disconnect(); } catch (e) {} }, 3500);
+      }
+      pingTimer = setTimeout(ping, 7000 + Math.random() * 8000);
+    };
+    pingTimer = setTimeout(ping, 4000);
+  }
+  function stopAmbient() { if (!amb) return; clearTimeout(pingTimer); const a = amb; amb = null; a.out.gain.setTargetAtTime(0, ctx.currentTime, .3); setTimeout(() => a.nodes.forEach(n => { try { n.stop(); } catch (e) {} }), 1500); }
+  return {
+    vol, save, ensure, resume, listener, sfx, startAmbient, stopAmbient,
+    apply: () => apply(false),
+    duck: (v) => { duck = v; apply(false); },
+    mood: (hz) => { if (amb) amb.lp.frequency.setTargetAtTime(hz, ctx.currentTime, .6); },
+    get ready() { return !!ctx && ctx.state === 'running'; }
+  };
+})();
+/* ---------- 3D scene: procedural Dr. X device, PBR lighting, orbit camera, picking ---------- */
+const Scene3D = (() => {
+  const V3 = THREE.Vector3;
+  const ACC = new THREE.Color(0x3dd5ff);
+  const LV_COL = { ok: '#4ef0a8', warn: '#ffb347', crit: '#ff5c70', none: '#7f93a5' };
+  let renderer, scene, camera, canvas, ok = false, root, lid, cuffG, inner, ring, glow, dust, marker, hooks = {};
+  const parts = {}, pickables = [], shellMats = [], edgeLines = [], pulses = [], wires = [];
+  const A = { lid: 0, lidT: 0, xr: 0, xrT: 0, sig: 0, sigT: 0, pw: 1, pwT: 1, cuff: 0, beat: 0, beatPh: 0 };
+  const cam = { target: new V3(0, 1.3, 0), tt: new V3(0, 1.3, 0), th: .62, ph: 1.1, r: 16, tth: .62, tph: 1.1, tr: 16, k: 5, spin: true, idle: 0, follow: null };
+  const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+  let hoverReq = null, hoverId = null, selId = null, insets = { t: 0, b: 0 };
+  let scrCtx, scrTex, oledCtx, oledTex, gluCtx, gluTex, logoTex, ledMats = [], btnRects = [], lastScr = 0, scrDirty = true;
+  const isMobile = Math.min(screen.width, screen.height) < 700;
+
+  /* ---- geometry helpers ---- */
+  function rr(P, w, d, r) {
+    const x = -w / 2, y = -d / 2;
+    P.moveTo(x + r, y); P.lineTo(x + w - r, y); P.absarc(x + w - r, y + r, r, -Math.PI / 2, 0, false);
+    P.lineTo(x + w, y + d - r); P.absarc(x + w - r, y + d - r, r, 0, Math.PI / 2, false);
+    P.lineTo(x + r, y + d); P.absarc(x + r, y + d - r, r, Math.PI / 2, Math.PI, false);
+    P.lineTo(x, y + r); P.absarc(x + r, y + r, r, Math.PI, Math.PI * 1.5, false); return P;
+  }
+  function geoY(w, d, h, r, bev, hole) {
+    const s = rr(new THREE.Shape(), w - 2 * bev, d - 2 * bev, Math.max(.02, r - bev));
+    if (hole) s.holes.push(rr(new THREE.Path(), hole.w + 2 * bev, hole.d + 2 * bev, hole.r));
+    const g = new THREE.ExtrudeGeometry(s, { depth: h - 2 * bev, bevelEnabled: true, bevelThickness: bev, bevelSize: bev, bevelSegments: 3, curveSegments: 10 });
+    g.rotateX(-Math.PI / 2); g.translate(0, bev, 0); return g;
+  }
+  function geoPlate(w, h, t, r, bev) {
+    const s = rr(new THREE.Shape(), w - 2 * bev, h - 2 * bev, Math.max(.02, r - bev));
+    const g = new THREE.ExtrudeGeometry(s, { depth: t - 2 * bev, bevelEnabled: true, bevelThickness: bev, bevelSize: bev, bevelSegments: 3, curveSegments: 10 });
+    g.translate(0, 0, -(t - 2 * bev) / 2); return g;
+  }
+  const M = {
+    white: () => new THREE.MeshPhysicalMaterial({ color: 0xeef2f6, roughness: .34, clearcoat: .7, clearcoatRoughness: .2 }),
+    liner: () => new THREE.MeshStandardMaterial({ color: 0x2a323c, roughness: .7, metalness: .1 }),
+    black: () => new THREE.MeshStandardMaterial({ color: 0x0c0d11, roughness: .5, metalness: .1 }),
+    gloss: () => new THREE.MeshPhysicalMaterial({ color: 0x07080b, roughness: .14, metalness: .2, clearcoat: 1, clearcoatRoughness: .05 }),
+    pcb: (c) => new THREE.MeshStandardMaterial({ color: c || 0x1a49b0, roughness: .5, metalness: .15 }),
+    metal: () => new THREE.MeshStandardMaterial({ color: 0xc4cad2, roughness: .28, metalness: 1 }),
+    gold: () => new THREE.MeshStandardMaterial({ color: 0xd8a84a, roughness: .3, metalness: 1 }),
+    blue: () => new THREE.MeshPhysicalMaterial({ color: 0x1f5fe6, roughness: .32, clearcoat: .5 }),
+    emis: (c) => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 1.2, roughness: .4 })
+  };
+  const mesh = (g, m, x, y, z, parent) => { const o = new THREE.Mesh(g, m); o.position.set(x || 0, y || 0, z || 0); if (parent) parent.add(o); return o; };
+  const bx = (w, h, d, m, x, y, z, p) => mesh(new THREE.BoxGeometry(w, h, d), m, x, y, z, p);
+  const cyl = (r, l, m, x, y, z, p, axis, seg) => {
+    const o = mesh(new THREE.CylinderGeometry(r, r, l, seg || 28), m, x, y, z, p);
+    if (axis === 'x') o.rotation.z = Math.PI / 2; if (axis === 'z') o.rotation.x = Math.PI / 2; return o;
+  };
+  function pinRow(n, len, p, x, y, z) {
+    const g = new THREE.Group(); g.position.set(x, y, z); p.add(g);
+    bx(len, .09, .1, M.black(), 0, 0, 0, g);
+    const im = new THREE.InstancedMesh(new THREE.BoxGeometry(.04, .07, .04), M.gold(), n), m4 = new THREE.Matrix4();
+    for (let i = 0; i < n; i++) { m4.setPosition(-len / 2 + len * (i + .5) / n, .075, 0); im.setMatrixAt(i, m4); } g.add(im); return g;
+  }
+  function board(w, d, col, p, x, y, z) {
+    const g = new THREE.Group(); g.position.set(x, y, z); p.add(g);
+    bx(w, .06, d, M.pcb(col), 0, 0, 0, g);
+    [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(c => cyl(.05, .07, M.gold(), c[0] * (w / 2 - .09), 0, c[1] * (d / 2 - .09), g));
+    return g;
+  }
+  function canvasTex(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = 8; return { c, x: c.getContext('2d'), t }; }
+
+  /* ---- canvas screens ---- */
+  function heart(c, x, y, s) { c.beginPath(); c.moveTo(x, y + s * .4); c.bezierCurveTo(x - s * .9, y - s * .1, x - s * .5, y - s * .7, x, y - s * .25); c.bezierCurveTo(x + s * .5, y - s * .7, x + s * .9, y - s * .1, x, y + s * .4); c.closePath(); }
+  function rrect(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
+  function srcLabel(s) { return s === 'live' ? 'LIVE' : s === 'manual' ? 'MANUAL' : 'DEMO'; }
+  function drawMain() {
+    const c = scrCtx, W = 1024, H = 600;
+    if (A.pwT < .5) { c.fillStyle = '#02050a'; c.fillRect(0, 0, W, H); c.fillStyle = '#18303f'; c.font = '500 26px sans-serif'; c.textAlign = 'center'; c.fillText('Standby', W / 2, H / 2); scrTex.needsUpdate = true; return; }
+    const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#0b2c7a'); g.addColorStop(1, '#041331'); c.fillStyle = g; c.fillRect(0, 0, W, H);
+    c.textAlign = 'left'; c.fillStyle = '#3dd5ff'; heart(c, 62, 52, 44); c.fill();
+    c.strokeStyle = '#041331'; c.lineWidth = 3; c.beginPath(); c.moveTo(40, 52); c.lineTo(55, 52); c.lineTo(62, 38); c.lineTo(70, 66); c.lineTo(78, 50); c.lineTo(86, 50); c.stroke();
+    c.fillStyle = '#fff'; c.font = '600 36px sans-serif'; c.fillText('Dr. X', 100, 64);
+    const d = new Date(), tm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    c.textAlign = 'right'; c.font = '600 32px sans-serif'; c.fillText(tm, W - 40, 62);
+    c.strokeStyle = '#cfe6ff'; c.lineWidth = 4; c.lineCap = 'round'; for (let i = 1; i <= 3; i++) { c.beginPath(); c.arc(W - 190, 66, i * 9, -Math.PI * .8, -Math.PI * .2); c.stroke(); }
+    c.textAlign = 'center'; c.fillStyle = '#fff'; c.font = '700 46px sans-serif'; c.fillText('Hello, User!', W / 2, 146);
+    c.fillStyle = '#b9d2ee'; c.font = '400 24px sans-serif'; c.fillText(S.source === 'demo' ? 'Showing demo data' : 'Your health is important', W / 2, 184);
+    const v = S.v, L = (k) => LV_COL[(S.lv && S.lv[k]) || 'none'];
+    const tiles = [
+      ['Body Temperature', v.temp.val.toFixed(1) + ' °C', 'temp', v.temp.src, '#3dd5ff'],
+      ['Heart Rate', Math.round(v.hr.val) + ' bpm', 'hr', v.hr.src, '#ff5c9a'],
+      ['Blood Pressure', Math.round(v.bp.sys) + '/' + Math.round(v.bp.dia) + ' mmHg', 'bp', v.bp.src, '#9a7bff'],
+      ['Blood Glucose', Math.round(v.glu.val) + ' mg/dL', 'glu', v.glu.src, '#4ef0a8']
+    ];
+    tiles.forEach((t, i) => {
+      const x = 50 + (i % 2) * 478, y = 214 + Math.floor(i / 2) * 124, w = 446, h = 108;
+      rrect(c, x, y, w, h, 18); c.fillStyle = 'rgba(40,110,230,.42)'; c.fill(); c.strokeStyle = 'rgba(150,200,255,.3)'; c.lineWidth = 2; c.stroke();
+      c.beginPath(); c.arc(x + 54, y + h / 2, 30, 0, 7); c.fillStyle = t[4]; c.globalAlpha = .9; c.fill(); c.globalAlpha = 1;
+      c.fillStyle = '#04122c'; c.textAlign = 'center'; c.font = '700 30px sans-serif'; c.fillText(['T', '♥', 'BP', '◆'][i], x + 54, y + h / 2 + 10);
+      c.textAlign = 'left'; c.fillStyle = '#cfe2f8'; c.font = '500 25px sans-serif'; c.fillText(t[0], x + 106, y + 40);
+      c.fillStyle = '#fff'; c.font = '600 38px sans-serif'; c.fillText(t[1], x + 106, y + 85);
+      c.beginPath(); c.arc(x + w - 28, y + 26, 8, 0, 7); c.fillStyle = L(t[2]); c.fill();
+      c.textAlign = 'right'; c.fillStyle = '#9fc1e8'; c.font = '500 17px sans-serif'; c.fillText(srcLabel(t[3]), x + w - 18, y + h - 14);
+    });
+    btnRects = [];
+    [['ai', 'Ask AI'], ['rec', 'Health Records'], ['set', 'Settings']].forEach((b, i) => {
+      const x = 50 + i * 313, y = 478, w = 296, h = 74;
+      rrect(c, x, y, w, h, 16); c.fillStyle = 'rgba(40,110,230,.5)'; c.fill(); c.strokeStyle = 'rgba(160,210,255,.4)'; c.lineWidth = 2; c.stroke();
+      c.fillStyle = '#fff'; c.textAlign = 'center'; c.font = '600 28px sans-serif'; c.fillText(b[1], x + w / 2, y + 48);
+      btnRects.push({ id: b[0], x, y, w, h });
+    });
+    scrTex.needsUpdate = true;
+  }
+  function drawOled() {
+    const c = oledCtx, W = 256, H = 128; c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
+    if (A.pwT > .5) {
+      const k = 1 + A.beat * .18; c.fillStyle = '#36e0ff'; heart(c, 50, 38, 30 * k); c.fill();
+      c.font = '700 44px monospace'; c.textAlign = 'left'; c.fillText(String(Math.round(S.v.hr.val)), 96, 52);
+      c.font = '500 20px monospace'; c.fillText('bpm', 176, 52);
+      c.fillRect(8, 70, 240, 2);
+      c.font = '700 34px monospace'; c.fillText('SpO₂ ' + Math.round(S.v.spo2.val) + '%', 12, 112);
+    }
+    oledTex.needsUpdate = true;
+  }
+  function drawGlu() {
+    const c = gluCtx, W = 192, H = 192; c.fillStyle = '#b5c7bd'; c.fillRect(0, 0, W, H);
+    if (A.pwT > .5) { c.fillStyle = '#11191a'; c.textAlign = 'center'; c.font = '700 84px monospace'; c.fillText(String(Math.round(S.v.glu.val)), W / 2, 112); c.font = '500 28px monospace'; c.fillText('mg/dL', W / 2, 152); c.beginPath(); c.arc(W / 2, 168, 6, 0, 7); c.fill(); }
+    gluTex.needsUpdate = true;
+  }
+  function drawLogo() {
+    const o = logoTex, c = o.x; c.clearRect(0, 0, 768, 192); c.fillStyle = '#1f6fe0'; heart(c, 108, 96, 96); c.fill();
+    c.strokeStyle = '#fff'; c.lineWidth = 7; c.lineCap = 'round'; c.lineJoin = 'round'; c.beginPath(); c.moveTo(50, 96); c.lineTo(88, 96); c.lineTo(106, 62); c.lineTo(124, 130); c.lineTo(142, 92); c.lineTo(166, 92); c.stroke();
+    c.fillStyle = '#0d2a63'; c.textAlign = 'left'; c.font = '700 92px sans-serif'; c.fillText('Dr. X', 200, 112);
+    c.fillStyle = '#3a557f'; c.font = '500 34px sans-serif'; c.fillText('Smart Health Assistant', 204, 160); o.t.needsUpdate = true;
+  }
+
+  /* ---- build ---- */
+  function envMap() {
+    const pm = new THREE.PMREMGenerator(renderer), es = new THREE.Scene();
+    es.add(new THREE.Mesh(new THREE.BoxGeometry(34, 18, 34), new THREE.MeshBasicMaterial({ color: 0x0b141d, side: THREE.BackSide })));
+    const panel = (w, h, p, col, k) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(col).multiplyScalar(k), side: THREE.DoubleSide })); m.position.set(p[0], p[1], p[2]); m.lookAt(0, 0, 0); es.add(m); };
+    panel(16, 7, [0, 9, -2], 0xe6f2ff, 7); panel(4, 11, [-13, 4, 5], 0x4fd8ff, 5); panel(4, 11, [13, 4, -5], 0xffffff, 3.5);
+    panel(12, 3, [0, 3, 14], 0x9cc2ff, 1.8); panel(10, 2, [0, 1, -14], 0x4fd8ff, 2);
+    scene.environment = pm.fromScene(es, .035).texture; pm.dispose();
+  }
+  function lights() {
+    scene.add(new THREE.HemisphereLight(0x9fc7ff, 0x05080c, .35));
+    const key = new THREE.DirectionalLight(0xffffff, 1.7); key.position.set(6, 13, 8); key.castShadow = true;
+    const ms = isMobile ? 1024 : 2048; key.shadow.mapSize.set(ms, ms);
+    Object.assign(key.shadow.camera, { left: -10, right: 10, top: 10, bottom: -10, near: 1, far: 40 }); key.shadow.bias = -.0004; key.shadow.normalBias = .03; scene.add(key);
+    const rim = new THREE.DirectionalLight(0x4fd8ff, 1.3); rim.position.set(-9, 5, -8); scene.add(rim);
+    inner = new THREE.PointLight(0x3dd5ff, 0, 8, 2); inner.position.set(0, .8, 0); scene.add(inner);
+  }
+  function stage() {
+    const fl = new THREE.Mesh(new THREE.CircleGeometry(20, 72), new THREE.MeshStandardMaterial({ color: 0x0b121a, roughness: .26, metalness: .6 }));
+    fl.rotation.x = -Math.PI / 2; fl.receiveShadow = true; scene.add(fl);
+    [6, 9.5, 13.5].forEach((r, i) => { const m = new THREE.Mesh(new THREE.RingGeometry(r, r + .025, 96), new THREE.MeshBasicMaterial({ color: 0x3dd5ff, transparent: true, opacity: .12 - i * .03, depthWrite: false })); m.rotation.x = -Math.PI / 2; m.position.y = .004; scene.add(m); });
+    const gc = document.createElement('canvas'); gc.width = gc.height = 256; const g = gc.getContext('2d'), gr = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+    gr.addColorStop(0, 'rgba(255,255,255,.9)'); gr.addColorStop(.4, 'rgba(255,255,255,.22)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 256, 256);
+    glow = new THREE.Mesh(new THREE.PlaneGeometry(17, 17), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(gc), color: 0x3dd5ff, transparent: true, opacity: .4, blending: THREE.AdditiveBlending, depthWrite: false }));
+    glow.rotation.x = -Math.PI / 2; glow.position.y = .01; scene.add(glow); ring = glow;
+    const n = isMobile ? 90 : 180, pos = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { const a = Math.random() * 6.28, r = 3 + Math.random() * 12; pos[i * 3] = Math.cos(a) * r; pos[i * 3 + 1] = Math.random() * 8; pos[i * 3 + 2] = Math.sin(a) * r; }
+    const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    dust = new THREE.Points(pg, new THREE.PointsMaterial({ color: 0x8fdcff, size: .045, transparent: true, opacity: .5, depthWrite: false, blending: THREE.AdditiveBlending })); scene.add(dust);
+    const mc = document.createElement('canvas'); mc.width = mc.height = 128; const m = mc.getContext('2d'); m.strokeStyle = '#3dd5ff'; m.lineWidth = 5;
+    m.beginPath(); m.arc(64, 64, 44, 0, 7); m.stroke(); [0, 1.57, 3.14, 4.71].forEach(a => { m.beginPath(); m.moveTo(64 + Math.cos(a) * 36, 64 + Math.sin(a) * 36); m.lineTo(64 + Math.cos(a) * 60, 64 + Math.sin(a) * 60); m.stroke(); });
+    marker = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(mc), transparent: true, depthTest: false, depthWrite: false, opacity: .95 })); marker.visible = false; marker.renderOrder = 10; scene.add(marker);
+  }
+  function reg(id, objs, o) {
+    o = o || {}; const mats = [];
+    const a = new THREE.Object3D(); a.position.set(o.ax || 0, o.ay || 0, o.az || 0); (o.ap || root).add(a);
+    objs.forEach(ob => ob.traverse(m => {
+      if (!m.isMesh) return;
+      if (m.userData.part === undefined) { m.userData.part = id; pickables.push(m); }
+      if (!m.material.isMeshBasicMaterial) { m.castShadow = m.receiveShadow = true; if (m.material.emissive && m.userData.part === id && !m.userData.noHl) mats.push(m.material); }
+    }));
+    parts[id] = { id, anchor: a, mats, h: 0, lh: 0, internal: !!o.internal, dist: o.dist || 7, objs };
+  }
+  function wire(a, b, col, r, bulge, group) {
+    const A3 = new V3(...a), B3 = new V3(...b), mid = (t) => A3.clone().lerp(B3, t).add(new V3(0, bulge * (t < .5 ? t * 2 : (1 - t) * 2) * .7 + bulge * .3, 0));
+    const curve = new THREE.CatmullRomCurve3([A3, mid(.25), mid(.5), mid(.75), B3]);
+    const m = mesh(new THREE.TubeGeometry(curve, 24, r, 6, false), new THREE.MeshStandardMaterial({ color: col, roughness: .55, emissive: col, emissiveIntensity: 0 }), 0, 0, 0, group);
+    m.castShadow = true; wires.push(m); return curve;
+  }
+  function pulse(curve, col, dir, speed, off) {
+    const m = mesh(new THREE.SphereGeometry(.07, 10, 10), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: .95 }), 0, 0, 0, root); m.visible = false;
+    pulses.push({ m, curve, t: off || 0, dir: dir || 1, sp: speed || .35 });
+  }
+  function build() {
+    root = new THREE.Group(); scene.add(root); const internals = new THREE.Group(); root.add(internals);
+    const shell = [];
+    const sh = (m) => { m.userData.shell = true; shell.push(m); return m; };
+    // tray
+    const tray = sh(mesh(geoY(8.6, 4.4, 1.0, .45, .05, { w: 8.16, d: 3.96, r: .28 }), M.white(), 0, 0, 0, root));
+    const floor = sh(mesh(geoY(8.5, 4.3, .2, .42, .04), M.liner(), 0, 0, 0, root));
+    // lid group
+    lid = new THREE.Group(); lid.position.y = 1; root.add(lid);
+    const lidBody = sh(mesh(geoY(8.6, 4.4, 1.1, .45, .08), M.white(), 0, 0, 0, lid));
+    const strip = mesh(new THREE.BoxGeometry(7.6, .035, .02), new THREE.MeshBasicMaterial({ color: 0x3dd5ff, toneMapped: false }), 0, .46, 2.205, lid); strip.userData.noHl = true;
+    logoTex = canvasTex(768, 192); drawLogo();
+    const logo = mesh(new THREE.PlaneGeometry(3.2, .8), new THREE.MeshBasicMaterial({ map: logoTex.t, transparent: true, polygonOffset: true, polygonOffsetFactor: -2 }), -.7, 1.108, 1.62, lid); logo.rotation.x = -Math.PI / 2;
+    // display
+    const dsp = new THREE.Group(); dsp.position.set(-.7, 1.1, .35); lid.add(dsp);
+    const dbase = sh(mesh(geoY(4.6, 1.5, .3, .3, .05), M.white(), 0, 0, 0, dsp));
+    const tilt = new THREE.Group(); tilt.position.set(0, .3, -.45); tilt.rotation.x = -.26; dsp.add(tilt);
+    mesh(geoPlate(4.5, 2.8, .22, .22, .04), M.gloss(), 0, 1.4, 0, tilt);
+    const sc = canvasTex(1024, 600); scrCtx = sc.x; scrTex = sc.t;
+    const screen = mesh(new THREE.PlaneGeometry(4.1, 2.4), new THREE.MeshBasicMaterial({ map: scrTex, toneMapped: false }), 0, 1.4, .118, tilt); screen.userData.isScreen = true;
+    // cuff
+    cuffG = new THREE.Group(); cuffG.position.set(2.9, 1.1 + .95, -1.0); lid.add(cuffG);
+    const fab = document.createElement('canvas'); fab.width = fab.height = 128; const f = fab.getContext('2d'); f.fillStyle = '#777'; f.fillRect(0, 0, 128, 128);
+    for (let i = 0; i < 1400; i++) { f.fillStyle = 'rgba(' + (Math.random() > .5 ? '255,255,255' : '0,0,0') + ',.25)'; f.fillRect(Math.random() * 128, Math.random() * 128, 2, 2); }
+    const fabT = new THREE.CanvasTexture(fab); fabT.wrapS = fabT.wrapT = THREE.RepeatWrapping; fabT.repeat.set(4, 2);
+    const cm = new THREE.MeshStandardMaterial({ color: 0x15171c, roughness: .92, bumpMap: fabT, bumpScale: 1.4 });
+    cyl(.95, 2.5, cm, 0, 0, 0, cuffG, 'x', 48); cyl(.97, .5, new THREE.MeshStandardMaterial({ color: 0x24282f, roughness: .85, bumpMap: fabT, bumpScale: 1 }), -.6, 0, 0, cuffG, 'x', 48);
+    cyl(.96, .1, new THREE.MeshStandardMaterial({ color: 0x59606a, roughness: .8 }), .75, 0, 0, cuffG, 'x', 48);
+    // glucose meter
+    const gm = new THREE.Group(); gm.position.set(3, 1.1, 1.05); lid.add(gm);
+    const gt = new THREE.Group(); gt.position.set(0, .06, 0); gt.rotation.x = -.32; gm.add(gt);
+    mesh(geoPlate(1.3, 2.1, .36, .26, .05), M.gloss(), 0, 1.05, 0, gt);
+    const gl = canvasTex(192, 192); gluCtx = gl.x; gluTex = gl.t;
+    mesh(new THREE.PlaneGeometry(.92, .92), new THREE.MeshBasicMaterial({ map: gluTex, toneMapped: false }), 0, 1.5, .186, gt);
+    [-.36, 0, .36].forEach(x => cyl(.1, .05, new THREE.MeshStandardMaterial({ color: 0x3a3f48, roughness: .4 }), x, .5, .185, gt, 'z', 16));
+    bx(.5, .06, .1, M.metal(), 0, 2.08, .1, gt);
+    // power / ports
+    const pw = new THREE.Group(); root.add(pw);
+    const hl = new THREE.Group(); hl.position.set(-1, .5, 2.2); pw.add(hl); bx(3.6, .5, .12, M.black(), 0, 0, .04, hl);
+    const led = mesh(new THREE.SphereGeometry(.065, 12, 12), new THREE.MeshBasicMaterial({ color: 0x4ef0a8, toneMapped: false }), -1.4, 0, .11, hl); ledMats.push(led.material);
+    mesh(new THREE.TorusGeometry(.13, .035, 8, 20), M.metal(), -.75, 0, .1, hl); bx(.5, .15, .05, M.metal(), .1, 0, .09, hl); bx(.4, .09, .06, M.black(), .1, 0, .105, hl); mesh(new THREE.TorusGeometry(.08, .025, 8, 16), M.metal(), .95, 0, .1, hl);
+    const hr = new THREE.Group(); hr.position.set(3.1, .5, 2.2); pw.add(hr); bx(2.3, .5, .12, M.black(), 0, 0, .04, hr);
+    bx(.62, .24, .05, M.metal(), -.6, 0, .09, hr); bx(.5, .08, .06, M.black(), -.6, .05, .1, hr);
+    cyl(.17, .08, M.gloss(), .6, 0, .1, hr, 'z', 24); const pr = mesh(new THREE.TorusGeometry(.21, .028, 8, 28), new THREE.MeshBasicMaterial({ color: 0x4ef0a8, toneMapped: false }), .6, 0, .12, hr); ledMats.push(pr.material);
+    // IR thermometer MLX90614
+    const mlx = new THREE.Group(); root.add(mlx);
+    const bar = new THREE.Group(); bar.position.set(-4.3, .5, -1.05); mlx.add(bar);
+    cyl(.45, .12, M.black(), -.06, 0, 0, bar, 'x'); cyl(.38, .5, M.gloss(), -.34, 0, 0, bar, 'x', 32); cyl(.3, .06, M.metal(), -.62, 0, 0, bar, 'x', 32);
+    mesh(new THREE.CircleGeometry(.24, 28), new THREE.MeshPhysicalMaterial({ color: 0x050914, roughness: .05, metalness: .3, clearcoat: 1 }), -.655, 0, 0, bar).rotation.y = -Math.PI / 2;
+    const mb = board(1.1, 1.1, 0x1a49b0, internals, -3.2, .23, -1.1); cyl(.24, .3, M.metal(), -.35, .18, 0, mb, null, 24); bx(.25, .05, .25, M.black(), .3, .05, .25, mb);
+    reg('mlx90614', [mlx, mb], { ap: bar, ax: -.4, ay: 0, az: 0, dist: 5.5 });
+    // OLED / SpO2 display housing
+    const oled = new THREE.Group(); root.add(oled);
+    bx(.55, .8, 1.5, M.black(), -4.57, .5, 1.2, oled);
+    const oc = canvasTex(256, 128); oledCtx = oc.x; oledTex = oc.t;
+    const op = mesh(new THREE.PlaneGeometry(1.3, .62), new THREE.MeshBasicMaterial({ map: oledTex, toneMapped: false }), -4.852, .5, 1.2, oled); op.rotation.y = -Math.PI / 2;
+    const ob = board(.95, .95, 0x1a49b0, internals, -3.6, .23, 1.35); bx(.62, .04, .4, M.gloss(), 0, .05, -.05, ob); pinRow(4, .4, ob, 0, .03, .38);
+    reg('oled', [oled, ob], { ap: oled, ax: -4.85, ay: .5, az: 1.2, dist: 5.5, internal: false });
+    // MAX30102
+    const xb = board(.9, .9, 0x1a49b0, internals, -2.95, .23, .3); bx(.28, .05, .22, M.black(), 0, .05, 0, xb);
+    const l1 = mesh(new THREE.SphereGeometry(.035, 8, 8), new THREE.MeshBasicMaterial({ color: 0xff3b3b, toneMapped: false }), -.06, .08, .02, xb), l2 = mesh(new THREE.SphereGeometry(.035, 8, 8), new THREE.MeshBasicMaterial({ color: 0xff9bd0, toneMapped: false }), .06, .08, .02, xb); ledMats.push(l1.material, l2.material); pinRow(5, .5, xb, 0, .03, .38);
+    reg('max30102', [xb], { ap: xb, internal: true, dist: 4.6, ay: .1 });
+    // ESP32
+    const eb = board(2.3, 1.5, 0x0e2a66, internals, -.6, .23, -.2); const ep = eb;
+    bx(.95, .12, 1.0, M.metal(), -.2, .09, 0, eb); bx(.4, .02, .85, M.black(), .75, .04, 0, eb); bx(.32, .14, .28, M.metal(), -1.05, .1, 0, eb); bx(.22, .08, .22, M.black(), .2, .06, .55, eb);
+    pinRow(19, 2.1, eb, 0, .03, -.65); pinRow(19, 2.1, eb, 0, .03, .65);
+    reg('esp32', [eb], { ap: eb, internal: true, dist: 5, ay: .15 });
+    // wifi module ESP8266
+    const wb = board(1.1, 1.1, 0x1a49b0, internals, 2.6, .23, -1.1); bx(.6, .1, .7, M.metal(), -.1, .08, 0, wb); bx(.2, .02, .6, M.gold(), .38, .04, 0, wb); pinRow(4, .5, wb, -.2, .03, .45);
+    reg('wifi', [wb], { ap: wb, internal: true, dist: 4.6, ay: .1 });
+    // battery
+    const bat = new THREE.Group(); bat.position.set(1.75, .2, .95); internals.add(bat);
+    mesh(geoY(2, 1.2, .56, .12, .04), M.blue(), 0, 0, 0, bat); bx(1.5, .01, .5, new THREE.MeshStandardMaterial({ color: 0xcfe0ff, roughness: .6 }), 0, .565, 0, bat);
+    reg('battery', [bat], { ap: bat, internal: true, dist: 5, ay: .3 });
+    // buzzer
+    const bz = new THREE.Group(); bz.position.set(-.9, .2, 1.5); internals.add(bz); cyl(.4, .36, M.black(), 0, .18, 0, bz, null, 32); cyl(.07, .05, new THREE.MeshStandardMaterial({ color: 0x000000 }), 0, .37, 0, bz); bx(.9, .06, .2, M.black(), 0, .06, 0, bz);
+    reg('buzzer', [bz], { ap: bz, internal: true, dist: 4, ay: .3 });
+    // antenna
+    const an = new THREE.Group(); an.position.set(3.6, .55, -2.3); root.add(an); cyl(.13, .3, M.gold(), 0, 0, .1, an, 'z', 6);
+    const rod = new THREE.Group(); rod.rotation.x = -.35; an.add(rod); cyl(.09, 1.9, M.black(), 0, .95, 0, rod, null, 16); for (let i = 0; i < 5; i++) cyl(.1, .03, M.black(), 0, .35 + i * .12, 0, rod);
+    reg('antenna', [an], { ap: rod, ay: .9, dist: 5.5 });
+    // power
+    reg('power', [pw], { ap: hr, ax: .6, az: .2, dist: 5.5 });
+    // screen, cuff, glucose
+    reg('screen', [dsp.children[1], screen], { ap: tilt, ay: 1.4, az: .2, dist: 8 });
+    reg('cuff', [cuffG], { ap: cuffG, dist: 7.5 });
+    reg('glucose', [gm], { ap: gt, ay: 1.2, az: .2, dist: 5.5 });
+    // enclosure (registered last so leaf parts keep their own ids)
+    reg('enclosure', [tray, floor, lid], { ap: root, ax: 0, ay: .5, az: 2.2, dist: 11 });
+    // wires
+    const wg = new THREE.Group(); wg.userData.noPick = true; internals.add(wg);
+    const bundle = (a, b, dz, cols, r) => cols.map((c, i) => wire([a[0], a[1], a[2] + dz[i]], [b[0], b[1], b[2] + dz[i] * .6], c, r || .021, .32, wg));
+    const cols = [0xffd23d, 0xff8a2a, 0xff3b3b, 0x4a525e], dz = [-.07, -.023, .023, .07];
+    const cm1 = bundle([-2.7, .28, -1.1], [-1.45, .36, -.78], dz, cols), cm2 = bundle([-2.5, .28, .3], [-1.45, .36, .2], dz, cols), cm3 = bundle([-3.15, .28, 1.35], [-1.42, .36, .35], dz, cols);
+    const wf = bundle([2.05, .28, -1.1], [.5, .36, -.65], dz, [0x3de0ff, 0x9a7bff, 0xff3b3b, 0x4a525e]);
+    const wbat = bundle([.75, .42, .9], [.45, .36, .45], [-.05, .05], [0xff3b3b, 0x20242b], .03);
+    const wbz = bundle([-1.1, .3, 1.35], [-.95, .36, .5], [-.04, .04], [0xff8a2a, 0x4a525e]);
+    pulse(cm1[0], 0xffe27a, 1, .5, 0); pulse(cm1[0], 0xffe27a, 1, .5, .5); pulse(cm2[0], 0xffe27a, 1, .45, .2); pulse(cm2[0], 0xffe27a, 1, .45, .7);
+    pulse(cm3[0], 0x7aeaff, -1, .4, .1); pulse(cm3[0], 0x7aeaff, -1, .4, .6); pulse(wf[0], 0x9a7bff, -1, .5, .3); pulse(wf[1], 0x3de0ff, 1, .5, .6);
+    pulse(wbat[0], 0xff6a6a, 1, .6, 0); pulse(wbat[0], 0xff6a6a, 1, .6, .5); pulse(wbz[0], 0xffb347, -1, .3, .5);
+    // shell edges + mats
+    shell.forEach(m => { shellMats.push(m.material); const e = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry, 32), new THREE.LineBasicMaterial({ color: 0x3dd5ff, transparent: true, opacity: 0 })); e.visible = false; m.add(e); edgeLines.push(e); });
+  }
+
+  /* ---- camera ---- */
+  const defR = () => { const a = camera.aspect; return a < .75 ? 31 : a < 1.2 ? 23 : 18.5; };
+  const PRESET = {
+    exterior: () => ({ th: .62, ph: 1.1, r: defR(), y: 1.4 }), internals: () => ({ th: .5, ph: .98, r: defR() * 1.12, y: 2.1 }),
+    xray: () => ({ th: -.6, ph: 1.05, r: defR(), y: 1.3 }), signal: () => ({ th: .3, ph: .8, r: defR() * .9, y: 1.1 })
+  };
+  function flyTo(p, k) { if (p.th !== undefined) cam.tth = p.th; if (p.ph !== undefined) cam.tph = p.ph; if (p.r !== undefined) cam.tr = p.r; if (p.y !== undefined) cam.tt.set(0, p.y, 0); cam.follow = null; cam.k = k || 3.2; }
+  function userAct() { cam.idle = 0; cam.k = 10; }
+  const rotate = (dx, dy) => { cam.tth -= dx * .0055; cam.tph = Math.min(1.52, Math.max(.14, cam.tph - dy * .0055)); };
+  function pan(dx, dy) {
+    const s = cam.r * .0017, right = new V3().setFromMatrixColumn(camera.matrix, 0), up = new V3().setFromMatrixColumn(camera.matrix, 1);
+    cam.tt.addScaledVector(right, -dx * s).addScaledVector(up, dy * s); const L = cam.tt.length(); if (L > 9) cam.tt.multiplyScalar(9 / L); cam.follow = null;
+  }
+  const zoom = (f) => { cam.tr = Math.min(30, Math.max(4.2, cam.tr * f)); };
+
+  function pickAt(cx, cy) {
+    const rc = canvas.getBoundingClientRect(); ndc.set(((cx - rc.left) / rc.width) * 2 - 1, -((cy - rc.top) / rc.height) * 2 + 1);
+    ray.setFromCamera(ndc, camera);
+    for (const h of ray.intersectObjects(pickables, false)) { if (h.object.userData.shell && A.xrT > .5) continue; return h; }
+    return null;
+  }
+  function bind() {
+    const ptrs = new Map(); let down = null, pinch0 = 0, mid0 = null, moved = 0;
+    canvas.addEventListener('contextmenu', e => e.preventDefault());
+    canvas.addEventListener('pointerdown', e => {
+      canvas.focus({ preventScroll: true }); try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+      ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (ptrs.size === 1) { down = { x: e.clientX, y: e.clientY, t: performance.now(), b: e.button, sh: e.shiftKey }; moved = 0; } else { moved += 20; pinch0 = 0; mid0 = null; }
+      userAct(); canvas.classList.add('drag'); hooks.onTip && hooks.onTip(null);
+    });
+    canvas.addEventListener('pointermove', e => {
+      const p = ptrs.get(e.pointerId);
+      if (!p) { if (e.pointerType === 'mouse') hoverReq = { x: e.clientX, y: e.clientY }; return; }
+      const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
+      if (ptrs.size === 1) { moved += Math.abs(dx) + Math.abs(dy); if (down.b === 2 || down.b === 1 || down.sh) pan(dx, dy); else rotate(dx, dy); }
+      else if (ptrs.size === 2) {
+        const [a, b] = [...ptrs.values()], d = Math.hypot(a.x - b.x, a.y - b.y), m = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+        if (pinch0) zoom(pinch0 / d); pinch0 = d; if (mid0) pan(m.x - mid0.x, m.y - mid0.y); mid0 = m;
+      }
+      userAct();
+    });
+    const up = e => {
+      if (!ptrs.has(e.pointerId)) return; ptrs.delete(e.pointerId); if (ptrs.size < 2) { pinch0 = 0; mid0 = null; }
+      if (ptrs.size === 0) {
+        canvas.classList.remove('drag');
+        if (down && e.type === 'pointerup' && moved < 7 && performance.now() - down.t < 600 && down.b === 0) click(e.clientX, e.clientY);
+        down = null;
+      }
+    };
+    canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
+    canvas.addEventListener('pointerleave', () => { hoverReq = null; hooks.onHover && hooks.onHover(null); canvas.classList.remove('hov'); });
+    canvas.addEventListener('wheel', e => { e.preventDefault(); userAct(); zoom(Math.exp(Math.max(-120, Math.min(120, e.deltaY)) * .0011)); }, { passive: false });
+  }
+  function click(x, y) {
+    const h = pickAt(x, y);
+    if (!h) { hooks.onPick && hooks.onPick(null); return; }
+    const id = h.object.userData.part;
+    if (h.object.userData.isScreen && h.uv) {
+      const px = h.uv.x * 1024, py = (1 - h.uv.y) * 600, b = btnRects.find(r => px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h);
+      if (b && A.pwT > .5) { hooks.onScreenBtn && hooks.onScreenBtn(b.id); return; }
+    }
+    hooks.onPick && hooks.onPick(id, h.point);
+  }
+
+  /* ---- public ---- */
+  function init(cv, h) {
+    canvas = cv; hooks = h || {};
+    try {
+      renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+    } catch (e) { return false; }
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.75 : 2));
+    renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+    renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    scene = new THREE.Scene(); scene.background = new THREE.Color(0x04070b); scene.fog = new THREE.FogExp2(0x04070b, .016);
+    camera = new THREE.PerspectiveCamera(36, 1, .1, 120);
+    envMap(); lights(); stage(); build(); bind(); ok = true; resize(); const p = PRESET.exterior(); Object.assign(cam, { th: p.th + .5, tth: p.th, tph: p.ph, ph: 1.4, tr: p.r, r: p.r * 1.5, k: 2 });
+    scrDirty = true; return true;
+  }
+  function resize() {
+    if (!ok) return; const w = canvas.clientWidth || 1, h = canvas.clientHeight || 1;
+    renderer.setSize(w, h, false); camera.aspect = w / h;
+    if (insets.b || insets.t) camera.setViewOffset(w, h, 0, (insets.b - insets.t) / 2, w, h); else camera.clearViewOffset();
+    camera.updateProjectionMatrix();
+  }
+  function setInsets(t, b) { insets = { t, b }; resize(); }
+  function setMode(m) {
+    A.lidT = m === 'internals' ? 1 : 0; A.xrT = (m === 'xray' || m === 'signal') ? 1 : 0; A.sigT = m === 'signal' ? 1 : 0;
+    if (ok) flyTo(PRESET[m](), 2.6);
+  }
+  function resetView(m) { if (ok) flyTo(PRESET[m || 'exterior'](), 3.4); }
+  function update(dt, now) {
+    if (!ok) return;
+    const ex = (k) => 1 - Math.exp(-dt * k);
+    A.lid += (A.lidT - A.lid) * ex(3.4); A.xr += (A.xrT - A.xr) * ex(4); A.sig += (A.sigT - A.sig) * ex(4); A.pw += (A.pwT - A.pw) * ex(5);
+    lid.position.y = 1 + A.lid * 3.8; lid.rotation.x = -A.lid * .05; lid.rotation.z = A.lid * .015;
+    const tr = A.xr > .01; shellMats.forEach(m => { m.transparent = tr; m.opacity = 1 - A.xr * .88; m.depthWrite = A.xr < .5; });
+    edgeLines.forEach(l => { l.visible = A.xr > .02; l.material.opacity = A.xr * .6; });
+    inner.intensity = (A.xr * 1.6 + A.lid * .5) * A.pw;
+    // beat
+    const hr = Math.max(30, S.v.hr.val || 70); A.beatPh += dt * hr / 60; A.beat *= Math.exp(-dt * 6);
+    if (A.beatPh >= 1) { A.beatPh -= 1; A.beat = A.pwT > .5 ? 1 : 0; hooks.onBeat && hooks.onBeat(); }
+    const worst = S.worst || 'ok', gc = worst === 'crit' ? 0xff5c70 : worst === 'warn' ? 0xffb347 : 0x3dd5ff;
+    glow.material.color.lerp(new THREE.Color(gc), ex(4)); glow.material.opacity = (.22 + .3 * A.beat) * A.pw + .04; glow.scale.setScalar(1 + A.beat * .04);
+    // led
+    const lc = A.pwT > .5 ? 0x4ef0a8 : 0xff4a4a; ledMats.forEach((m, i) => { if (i < 2 || i >= 4) m.color.setHex(lc); m.opacity = 1; });
+    // wires + pulses
+    wires.forEach(w => { w.material.emissiveIntensity = A.sig * .9; });
+    pulses.forEach(p => { p.m.visible = A.sig > .05; if (!p.m.visible) return; p.t = (p.t + dt * p.sp) % 1; const t = p.dir > 0 ? p.t : 1 - p.t; p.m.position.copy(p.curve.getPoint(t)); p.m.scale.setScalar(.6 + A.sig * .8 + Math.sin(now * .01 + p.t * 9) * .2); p.m.material.opacity = A.sig; });
+    // cuff inflation
+    const cl = S.bpRun ? S.bpRun.lvl : 0; A.cuff += (cl - A.cuff) * ex(6); const jit = S.bpRun && S.bpRun.pump ? Math.sin(now * .03) * .012 : 0;
+    cuffG.scale.set(1, 1 + A.cuff * .16 + jit, 1 + A.cuff * .16 + jit);
+    // screens
+    if (scrDirty || now - lastScr > 480) { scrDirty = false; lastScr = now; drawMain(); drawOled(); drawGlu(); }
+    // highlight
+    for (const id in parts) {
+      const p = parts[id], t = selId === id ? 1 : hoverId === id ? .5 : 0; p.h += (t - p.h) * ex(12);
+      if (Math.abs(p.h - p.lh) > .003) { p.lh = p.h; p.mats.forEach(m => { m.emissive.copy(ACC).multiplyScalar(p.h * .32); }); }
+    }
+    // hover
+    if (hoverReq) { const h = pickAt(hoverReq.x, hoverReq.y), id = h ? h.object.userData.part : null; if (id !== hoverId) { hoverId = id; hooks.onHover && hooks.onHover(id, hoverReq.x, hoverReq.y, h && h.object.userData.isScreen); canvas.classList.toggle('hov', !!id); } else if (id) hooks.onHover && hooks.onHover(id, hoverReq.x, hoverReq.y); hoverReq = null; }
+    // camera
+    cam.idle += dt; if (cam.spin && !reduced && cam.idle > 4 && !selId && S.mode !== 'signal') cam.tth += dt * .07;
+    if (cam.follow && parts[cam.follow]) { cam.tt.lerp(parts[cam.follow].anchor.getWorldPosition(new V3()), ex(3)); }
+    const k = ex(cam.k); cam.th += (cam.tth - cam.th) * k; cam.ph += (cam.tph - cam.ph) * k; cam.r += (cam.tr - cam.r) * k; cam.target.lerp(cam.tt, k);
+    camera.position.set(cam.target.x + cam.r * Math.sin(cam.ph) * Math.sin(cam.th), cam.target.y + cam.r * Math.cos(cam.ph), cam.target.z + cam.r * Math.sin(cam.ph) * Math.cos(cam.th));
+    camera.lookAt(cam.target);
+    // marker
+    if (selId && parts[selId]) { marker.visible = true; const wp = parts[selId].anchor.getWorldPosition(new V3()); marker.position.copy(wp); const s = camera.position.distanceTo(wp) * (.085 + Math.sin(now * .004) * .006); marker.scale.set(s, s, 1); marker.material.rotation += dt * .6; } else marker.visible = false;
+    dust.rotation.y += dt * .01;
+    renderer.render(scene, camera);
+  }
+  function project(id) {
+    if (!ok || !parts[id]) return null; const v = parts[id].anchor.getWorldPosition(new V3()).project(camera);
+    if (v.z > 1) return null; const w = canvas.clientWidth, h = canvas.clientHeight;
+    return { x: (v.x * .5 + .5) * w, y: (-v.y * .5 + .5) * h };
+  }
+  return {
+    init, resize, setInsets, setMode, resetView, update, project, flyTo, rotate, zoom, cam, parts, A,
+    get ok() { return ok; }, get camera() { return camera; },
+    select(id, focus) { selId = id; if (!ok) return; if (id && parts[id] && focus !== false) { cam.follow = id; cam.tr = Math.min(cam.tr, Math.max(parts[id].dist, 4.5)); cam.k = 3; cam.tph = Math.min(cam.tph, 1.15); } else if (!id) cam.follow = null; },
+    worldPos(id) { return ok && parts[id] ? parts[id].anchor.getWorldPosition(new V3()) : null; },
+    setPower(on) { A.pwT = on ? 1 : 0; scrDirty = true; }, dirty() { scrDirty = true; },
+    setSpin(v) { cam.spin = v; cam.idle = 0; }, get spin() { return cam.spin; },
+    hasInternals: (id) => !!(parts[id] && parts[id].internal)
+  };
+})();
+/* ---------- App: UI, telemetry, alerts, AI layer, boot ---------- */
+const RANK = { none: -1, ok: 0, warn: 1, crit: 2 };
+const sfx = (n, p) => HAudio.sfx(n, p);
+const isDesk = () => matchMedia('(min-width:901px)').matches;
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const fmtT = (d) => d.toLocaleTimeString([], { hour12: false });
+
+/* ----- toasts + log ----- */
+function toast(msg, kind, ms) {
+  const box = $('#toasts'), t = el('div', 'toast ' + (kind || 'ok'), msg); box.appendChild(t);
+  while (box.children.length > 3) box.firstChild.remove();
+  setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 320); }, ms || 3400);
+}
+function logEvt(kind, msg) { S.log.unshift({ t: new Date(), kind, msg }); if (S.log.length > 150) S.log.pop(); renderLog(); }
+function renderLog() {
+  const ul = $('#logList'); ul.textContent = '';
+  if (!S.log.length) { const li = el('li'); li.append(el('time', '', ''), el('span', '', 'Nothing logged yet.')); ul.appendChild(li); return; }
+  S.log.forEach(e => { const li = el('li', e.kind); li.append(el('time', '', fmtT(e.t)), el('span', '', e.msg)); ul.appendChild(li); });
+}
+
+/* ----- tabs + popovers ----- */
+let tab = 'vitals';
+const SECS = { vitals: '#sec-vitals', parts: '#sec-parts', inspect: '#sec-inspect', ai: '#sec-ai', log: '#sec-log' };
+function showTab(name) {
+  if (isDesk() && (name === 'vitals' || name === 'parts')) name = (tab === 'ai' || tab === 'log') ? tab : 'inspect';
+  if (!isDesk() && name === 'x') name = 'vitals';
+  tab = name;
+  for (const k in SECS) $(SECS[k]).classList.toggle('act', k === name);
+  $$('[data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
+  requestAnimationFrame(layoutInsets);
+}
+const POPS = { btnSrc: '#srcPop', btnAudio: '#audPop', btnHelp: '#helpPop' };
+function closePops(except) { for (const b in POPS) { if (b === except) continue; $(POPS[b]).hidden = true; $('#' + b).setAttribute('aria-expanded', 'false'); } }
+function togglePop(b) {
+  const p = $(POPS[b]), open = p.hidden; closePops(b); p.hidden = !open; $('#' + b).setAttribute('aria-expanded', String(open));
+  if (open) { const h = $('.top').getBoundingClientRect(), a = $('#app').getBoundingClientRect(); p.style.top = (h.bottom - a.top + 8) + 'px'; sfx('click'); }
+}
+
+/* ----- modes ----- */
+const MOOD = { exterior: 700, internals: 1100, xray: 1700, signal: 2400 };
+function setMode(m, quiet) {
+  if (S.mode === m) return; S.mode = m;
+  $$('.modes button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.mode === m)));
+  Scene3D.setMode(m); HAudio.mood(MOOD[m]); if (!quiet) { sfx('mode'); logEvt('sys', 'View: ' + m); }
+  if (S.sel) { if (m === 'exterior' && PARTS[S.sel].internal) select(null, { silent: true }); else Scene3D.select(S.sel); }
+  document.title = 'RIY3.0 Hive';
+}
+
+/* ----- parts list + selection ----- */
+function buildParts() {
+  const ul = $('#partList');
+  PART_ORDER.forEach(id => {
+    const P = PARTS[id], li = el('li'), b = el('button'); b.type = 'button'; b.dataset.id = id; b.dataset.nosound = '1'; b.setAttribute('aria-pressed', 'false');
+    const nm = el('span', 'pn', P.name); b.append(el('i', 'dot'), nm, el('span', 'pt', P.internal ? 'inside' : P.tag));
+    b.addEventListener('click', () => select(S.sel === id ? null : id, { focus: true })); li.appendChild(b); ul.appendChild(li);
+  });
+  $('#partCount').textContent = PART_ORDER.length + ' parts';
+}
+function partLevel(id) {
+  const P = PARTS[id]; if (!P.metric) return 'none'; let w = 'none';
+  P.metric.forEach(k => { const l = S.lv[k]; if (RANK[l] > RANK[w]) w = l; }); return w;
+}
+function select(id, o) {
+  o = o || {};
+  if (id && !PARTS[id]) id = null;
+  const changed = id !== S.sel; S.sel = id;
+  if (id && PARTS[id].internal && S.mode === 'exterior') setMode('internals');
+  Scene3D.select(id);
+  if (!id && changed) Scene3D.resetView(S.mode);
+  $$('#partList button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.id === id)));
+  $$('.tile').forEach(t => t.classList.toggle('sel', !!id && PARTS[id].metric && PARTS[id].metric.includes(t.dataset.k)));
+  renderInspect(); if (id) showTab('inspect');
+  if (!o.silent && changed) { id ? sfx('select', Scene3D.worldPos(id)) : sfx('deselect'); if (id) logEvt('sys', 'Selected ' + PARTS[id].name); }
+  if (id && o.focus) { const b = $('#partList [aria-pressed="true"]'); b && b.scrollIntoView && b.scrollIntoView({ block: 'nearest' }); }
+}
+
+/* ----- vitals tiles ----- */
+const tiles = {};
+function buildTiles() {
+  const g = $('#vgrid');
+  METRICS.forEach(m => {
+    const t = el('div', 'tile'); t.dataset.k = m.k; t.dataset.nosound = '1'; t.tabIndex = 0; t.setAttribute('role', 'button');
+    const th = el('div', 'th'), src = el('span', 'srct demo', 'DEMO'); th.append(el('span', 'tl', m.label), src);
+    const tv = el('div', 'tv'), val = el('b', '', '--'), unit = el('i', '', m.unit); tv.append(val, unit);
+    const tf = el('div', 'tf'), pill = el('span', 'pill ok', 'In range'), age = el('span', 'age', ''); tf.append(pill, age);
+    const cv = el('canvas', 'spark'); cv.setAttribute('aria-hidden', 'true');
+    t.append(th, tv, tf, cv); g.appendChild(t); tiles[m.k] = { root: t, val, src, pill, age, cv };
+    const go = () => select(S.sel === m.part ? null : m.part, { focus: true });
+    t.addEventListener('click', go); t.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+  });
+}
+const hasV = (k) => k === 'bp' ? S.v.bp.sys != null : S.v[k].val != null;
+function valText(k) { return !hasV(k) ? '--' : k === 'bp' ? Math.round(S.v.bp.sys) + '/' + Math.round(S.v.bp.dia) : k === 'temp' ? S.v.temp.val.toFixed(1) : String(Math.round(S.v[k].val)); }
+function ageText(k) {
+  if (!S.power) return 'standby'; if (!hasV(k)) return 'waiting';
+  const v = S.v[k]; if (k === 'temp' || k === 'hr' || k === 'spo2') return v.src === 'demo' ? 'simulated stream' : 'live stream';
+  const s = Math.round((Date.now() - v.ts) / 1000); return s < 5 ? 'just now' : s < 90 ? s + 's ago' : Math.round(s / 60) + ' min ago';
+}
+function drawSpark(k) {
+  const cv = tiles[k].cv, w = cv.clientWidth, h = cv.clientHeight; if (!w || !h) return;
+  const dpr = Math.min(devicePixelRatio || 1, 2); if (cv.width !== Math.round(w * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+  const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h);
+  const a = S.hist[k].slice(-90), col = { ok: '#3dd5ff', warn: '#ffb347', crit: '#ff5c70', none: '#6a8296' }[S.lv[k]] || '#3dd5ff';
+  c.strokeStyle = 'rgba(140,190,235,.1)'; c.lineWidth = 1; c.beginPath(); c.moveTo(0, h / 2); c.lineTo(w, h / 2); c.stroke();
+  if (a.length < 2) { c.setLineDash([3, 4]); c.strokeStyle = 'rgba(160,190,215,.35)'; c.beginPath(); c.moveTo(0, h / 2); c.lineTo(w, h / 2); c.stroke(); c.setLineDash([]); return; }
+  let mn = Math.min(...a.map(x => x.v)), mx = Math.max(...a.map(x => x.v)); const pad = Math.max((mx - mn) * .25, k === 'temp' ? .15 : 2); mn -= pad; mx += pad;
+  const X = (i) => 2 + (w - 6) * i / (a.length - 1), Y = (v) => h - 3 - (h - 7) * (v - mn) / (mx - mn);
+  const gr = c.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, col + '55'); gr.addColorStop(1, col + '00');
+  c.beginPath(); a.forEach((p, i) => i ? c.lineTo(X(i), Y(p.v)) : c.moveTo(X(i), Y(p.v))); c.strokeStyle = col; c.lineWidth = 1.6; c.lineJoin = 'round'; c.stroke();
+  c.lineTo(X(a.length - 1), h); c.lineTo(X(0), h); c.closePath(); c.fillStyle = gr; c.fill();
+  c.beginPath(); c.arc(X(a.length - 1), Y(a[a.length - 1].v), 3, 0, 7); c.fillStyle = col; c.fill();
+}
+function updateTiles() {
+  METRICS.forEach(m => {
+    const t = tiles[m.k], lv = S.lv[m.k], v = S.v[m.k]; t.val.textContent = valText(m.k);
+    t.root.classList.remove('ok', 'warn', 'crit'); if (lv !== 'none') t.root.classList.add(lv);
+    t.pill.className = 'pill ' + (lv === 'none' ? '' : lv); t.pill.textContent = lv === 'none' ? 'No data' : LVTXT[lv];
+    const s = hasV(m.k) ? v.src : 'none'; t.src.className = 'srct ' + (s === 'none' ? '' : s); t.src.textContent = s === 'demo' ? 'DEMO' : s === 'live' ? 'LIVE' : s === 'manual' ? 'MANUAL' : 'NO DATA';
+    t.age.textContent = ageText(m.k); drawSpark(m.k);
+    t.root.setAttribute('aria-label', m.label + ' ' + valText(m.k) + ' ' + m.unit + ', ' + (lv === 'none' ? 'no data' : LVTXT[lv]));
+  });
+}
+function flash(k) { const r = tiles[k].root; r.classList.remove('flash'); void r.offsetWidth; r.classList.add('flash'); }
+
+/* ----- telemetry ----- */
+function pushHist(k, v, t) { const a = S.hist[k]; a.push({ t: t || Date.now(), v }); if (a.length > 240) a.shift(); }
+function demoStep(t) {
+  const sc = SCEN[S.scen], s = (t || Date.now()) / 1000, r = () => Math.random() - .5, v = S.v, ts = t || Date.now();
+  const ini = (x, y) => x == null ? y : x;
+  v.temp.val = ini(v.temp.val, sc.temp); v.hr.val = ini(v.hr.val, sc.hr); v.spo2.val = ini(v.spo2.val, sc.spo2);
+  v.temp.val += (sc.temp + .1 * Math.sin(s / 41) - v.temp.val) * .08 + r() * .03;
+  v.hr.val += (sc.hr + 4 * Math.sin(s / 9) + 2 * Math.sin(s / 3.3) - v.hr.val) * .25 + r() * 1.2;
+  v.spo2.val = Math.min(100, v.spo2.val + (sc.spo2 + .5 * Math.sin(s / 23) - v.spo2.val) * .2 + r() * .25);
+  ['temp', 'hr', 'spo2'].forEach(k => { v[k].src = 'demo'; v[k].ts = ts; });
+  pushHist('temp', v.temp.val, ts); pushHist('hr', v.hr.val, ts); pushHist('spo2', v.spo2.val, ts);
+}
+function seedDemo() {
+  const sc = SCEN[S.scen], v = S.v, now = Date.now();
+  ['temp', 'hr', 'spo2', 'glu'].forEach(k => { v[k].val = null; }); v.bp.sys = v.bp.dia = null;
+  Object.keys(S.hist).forEach(k => S.hist[k] = []);
+  v.temp.val = sc.temp; v.hr.val = sc.hr; v.spo2.val = sc.spo2;
+  for (let i = 60; i > 0; i--) demoStep(now - i * 1000);
+  setBPGlu(sc.sys, sc.dia, sc.glu, 'demo', now);
+}
+function setBPGlu(sys, dia, glu, src, ts) {
+  const v = S.v; if (sys != null) { v.bp.sys = sys; v.bp.dia = dia; v.bp.src = src; v.bp.ts = ts || Date.now(); pushHist('bp', sys, ts); }
+  if (glu != null) { v.glu.val = glu; v.glu.src = src; v.glu.ts = ts || Date.now(); pushHist('glu', glu, ts); }
+}
+const lastLv = {}, pend = {};
+function evaluate(silent) {
+  let worst = 'ok';
+  METRICS.forEach(m => {
+    const k = m.k; let lv = 'none';
+    if (hasV(k)) lv = classify(k, k === 'bp' ? { sys: S.v.bp.sys, dia: S.v.bp.dia } : S.v[k].val);
+    if (lv !== S.lv[k]) {
+      pend[k] = pend[k] && pend[k].lv === lv ? { lv, n: pend[k].n + 1 } : { lv, n: 1 };
+      const need = (silent || k === 'bp' || k === 'glu' || S.lv[k] === 'none') ? 1 : 2;
+      if (pend[k].n >= need) { const from = S.lv[k]; S.lv[k] = lv; pend[k] = null; if (!silent) transition(m, from, lv); }
+    } else pend[k] = null;
+    if (RANK[S.lv[k]] > RANK[worst]) worst = S.lv[k];
+  });
+  S.worst = worst;
+}
+function transition(m, from, to) {
+  const txt = m.label + ' ' + valText(m.k) + ' ' + m.unit, pos = Scene3D.worldPos(PARTS[m.part] ? m.part : 'esp32');
+  if (RANK[to] > RANK[from] && to !== 'none') {
+    if (to === 'crit') { sfx('alarm'); toast(txt + ' is outside the safe range', 'err', 5200); logEvt('crit', txt + ': urgent range'); }
+    else { sfx('warn'); toast(txt + ' needs a check', 'warn', 4200); logEvt('warn', txt + ': outside normal range'); }
+    if (S.power && to !== 'ok') sfx('buzzer', Scene3D.worldPos('buzzer'));
+    flash(m.k);
+  } else if (to === 'ok' && (from === 'warn' || from === 'crit')) { sfx('success'); toast(m.label + ' is back in range', 'ok'); logEvt('ok', txt + ': back in range'); }
+}
+function refresh() {
+  updateTiles(); evaluateChip(); Scene3D.dirty();
+  PART_ORDER.forEach(id => { const d = $('#partList button[data-id="' + id + '"] .dot'); d.className = 'dot ' + (partLevel(id) === 'none' ? '' : partLevel(id)); });
+  updateInspectLive();
+}
+function evaluateChip() {
+  const bad = METRICS.filter(m => S.lv[m.k] === 'warn' || S.lv[m.k] === 'crit').length, c = $('#stChip');
+  c.className = 'chip ' + (!S.power ? '' : S.worst === 'none' ? '' : S.worst);
+  $('#stTxt').textContent = !S.power ? 'Standby' : bad ? bad + (bad > 1 ? ' readings' : ' reading') + ' to check' : 'All in range';
+}
+function tick() {
+  if (!S.power) return;
+  if (S.source === 'demo') demoStep();
+  evaluate(); refresh();
+}
+
+/* ----- serial link (real device) ----- */
+const serialOK = 'serial' in navigator;
+const RANGES = { temp: [25, 45], hr: [20, 250], spo2: [50, 100], sys: [50, 260], dia: [25, 160], glu: [20, 600], bat: [0, 100] };
+let badAt = 0;
+function ingest(line) {
+  let o; try { o = JSON.parse(line); } catch (e) { return; } if (!o || typeof o !== 'object') return;
+  const ok = (k) => typeof o[k] === 'number' && isFinite(o[k]) && o[k] >= RANGES[k][0] && o[k] <= RANGES[k][1], ts = Date.now(), bad = [];
+  ['temp', 'hr', 'spo2', 'glu'].forEach(k => { if (k in o) { if (ok(k)) { S.v[k].val = o[k]; S.v[k].src = 'live'; S.v[k].ts = ts; pushHist(k, o[k]); } else bad.push(k); } });
+  if ('sys' in o || 'dia' in o) { if (ok('sys') && ok('dia') && o.sys > o.dia) { setBPGlu(o.sys, o.dia, null, 'live', ts); flash('bp'); if (S.bpRun === 'wait') S.bpRun = null; } else bad.push('bp'); }
+  if ('bat' in o) { if (ok('bat')) S.bat = Math.round(o.bat); else bad.push('bat'); }
+  if (bad.length && ts - badAt > 10000) { badAt = ts; logEvt('err', 'Ignored out-of-range values from device: ' + bad.join(', ')); }
+  evaluate(); refresh();
+}
+async function connectSerial() {
+  if (!serialOK) { toast('This browser has no Web Serial support. Use Chrome or Edge on a computer.', 'err', 5000); sfx('error'); return; }
+  try {
+    const port = await navigator.serial.requestPort(); await port.open({ baudRate: 115200 });
+    S.serial = { port, reader: null, writer: port.writable ? port.writable.getWriter() : null };
+    setSource('live'); sfx('success'); toast('Device connected over USB serial', 'ok'); logEvt('ok', 'Serial device connected'); readLoop(port);
+  } catch (e) {
+    S.serial = null; sfx('error');
+    toast(e && e.name === 'NotFoundError' ? 'No port selected.' : 'Serial access was blocked in this view. Open the page in Chrome or Edge with the device attached.', 'err', 5200); logEvt('err', 'Serial connect failed: ' + (e && e.name || 'error'));
+  }
+}
+async function readLoop(port) {
+  const sess = S.serial; let buf = '';
+  try {
+    const dec = new TextDecoderStream(); const closed = port.readable.pipeTo(dec.writable).catch(() => {}); const reader = dec.readable.getReader(); sess.reader = reader; sess.closed = closed;
+    for (;;) { const { value, done } = await reader.read(); if (done) break; buf += value; let i; while ((i = buf.indexOf('\n')) >= 0) { const l = buf.slice(0, i).trim(); buf = buf.slice(i + 1); if (l) ingest(l); } if (buf.length > 4000) buf = ''; }
+  } catch (e) { /* port lost */ }
+  if (S.serial === sess) { toast('Device disconnected. Back to demo data.', 'warn'); sfx('warn'); logEvt('warn', 'Serial device disconnected'); await dropSerial(); setSource('demo'); }
+}
+async function dropSerial() {
+  const s = S.serial; S.serial = null; if (!s) return;
+  try { s.reader && await s.reader.cancel(); } catch (e) {} try { s.writer && s.writer.releaseLock(); } catch (e) {} try { s.closed && await s.closed; } catch (e) {} try { await s.port.close(); } catch (e) {}
+}
+async function sendCmd(o) { try { if (S.serial && S.serial.writer) await S.serial.writer.write(new TextEncoder().encode(JSON.stringify(o) + '\n')); } catch (e) { toast('Could not send the command to the device.', 'err'); } }
+function setSource(src) {
+  S.source = src; Object.keys(S.hist).forEach(k => S.hist[k] = []); S.bat = null; S.bpRun = null;
+  if (src === 'live') { ['temp', 'hr', 'spo2', 'glu'].forEach(k => { S.v[k].val = null; }); S.v.bp.sys = S.v.bp.dia = null; METRICS.forEach(m => S.lv[m.k] = 'none'); }
+  else { seedDemo(); }
+  evaluate(true); updateSrcUI(); refresh(); renderInspect(); logEvt('sys', 'Data source: ' + (src === 'live' ? 'live device' : 'demo'));
+}
+function updateSrcUI() {
+  const live = S.source === 'live', c = $('#btnSrc');
+  c.classList.toggle('live', live); $('#srcTxt').textContent = live ? 'LIVE · USB' : 'DEMO DATA';
+  $('#srcDot').style.cssText = 'background:' + (live ? 'var(--ok)' : 'var(--warn)') + ';color:' + (live ? 'var(--ok)' : 'var(--warn)');
+  $('#srcDesc').textContent = live ? 'Live readings from the connected device over USB serial.' : 'Simulated by this page. Nothing shown is measured.';
+  $('#scnWrap').hidden = live; $('#btnLink').hidden = live; $('#btnUnlink').hidden = !live;
+  $('#linkNote').textContent = live ? 'The device should print one JSON object per line, for example {"temp":36.8,"hr":72,"spo2":98,"sys":120,"dia":80,"glu":98,"bat":87}. Missing fields stay empty.' :
+    (serialOK ? 'Demo data lets you explore the scene and the AI. Link an ESP32 over USB to replace it with real readings.' : 'Web Serial is not available in this browser, so only demo data and manual entries can be used here.');
+  $('#btnLink').disabled = !serialOK;
+}
+
+/* ----- blood pressure run, manual entry ----- */
+function startBP() {
+  if (S.bpRun) return; if (!S.power) { toast('Switch the device on first.', 'warn'); sfx('warn'); return; }
+  if (S.source === 'live') { if (!S.serial) { toast('No device linked.', 'err'); return; } sendCmd({ cmd: 'bp' }); S.bpRun = 'wait'; setTimeout(() => { if (S.bpRun === 'wait') { S.bpRun = null; toast('The device did not answer the measurement request.', 'err'); sfx('error'); renderInspect(); } }, 30000); toast('Measurement requested from the device.', 'ok'); logEvt('sys', 'BP measurement requested'); renderInspect(); return; }
+  S.bpRun = { t0: performance.now(), lvl: 0, pump: true, p: 0, released: false }; const pos = Scene3D.worldPos('cuff'); sfx('cuff', pos); logEvt('sys', 'BP measurement started (demo)'); renderInspect();
+}
+function stepBP(now) {
+  const r = S.bpRun; if (!r || r === 'wait') return; const e = now - r.t0;
+  if (e < 5000) { r.lvl = e / 5000; r.pump = true; r.p = r.lvl * 165; }
+  else if (e < 9000) { if (!r.released) { r.released = true; sfx('release', Scene3D.worldPos('cuff')); } r.lvl = 1 - (e - 5000) / 4000; r.pump = false; r.p = 165 * r.lvl; }
+  else { finishBP(); return; }
+  const b = $('#bpBar'); if (b) { b.style.width = Math.round(r.lvl * 100) + '%'; $('#bpTxt').textContent = Math.round(r.p) + ' mmHg · ' + (r.pump ? 'inflating' : 'releasing'); }
+}
+function finishBP() {
+  S.bpRun = null; const sc = SCEN[S.scen], sys = sc.sys + Math.round((Math.random() - .5) * 8), dia = sc.dia + Math.round((Math.random() - .5) * 5);
+  setBPGlu(sys, dia, null, 'demo'); sfx('success', Scene3D.worldPos('cuff')); toast('Blood pressure ' + sys + '/' + dia + ' mmHg (demo)', 'ok'); logEvt('ok', 'BP ' + sys + '/' + dia + ' mmHg (demo)');
+  flash('bp'); evaluate(); refresh(); renderInspect();
+}
+function logManual(kind) {
+  const num = (id) => { const e = $('#' + id); return e ? parseFloat(e.value) : NaN; };
+  if (kind === 'bp') {
+    const sys = num('inSys'), dia = num('inDia');
+    if (!(sys >= 50 && sys <= 260 && dia >= 25 && dia <= 160 && sys > dia)) { toast('Enter systolic 50–260 and diastolic 25–160, with systolic higher.', 'err'); sfx('error'); return; }
+    setBPGlu(Math.round(sys), Math.round(dia), null, 'manual'); logEvt('ok', 'BP ' + Math.round(sys) + '/' + Math.round(dia) + ' logged by hand'); flash('bp');
+  } else {
+    const g = num('inGlu'); if (!(g >= 20 && g <= 600)) { toast('Enter glucose between 20 and 600 mg/dL.', 'err'); sfx('error'); return; }
+    setBPGlu(null, null, Math.round(g), 'manual'); logEvt('ok', 'Glucose ' + Math.round(g) + ' mg/dL logged by hand'); flash('glu');
+  }
+  sfx('success'); toast('Reading logged', 'ok'); evaluate(); refresh(); renderInspect();
+}
+
+/* ----- power ----- */
+function setPower(on) {
+  if (S.power === on) return; S.power = on; Scene3D.setPower(on);
+  const b = $('#btnPower'); b.setAttribute('aria-pressed', String(on)); b.classList.toggle('off', !on);
+  if (on) { sfx('startup'); HAudio.duck(1); toast('Device on', 'ok'); logEvt('ok', 'Device powered on'); }
+  else { S.bpRun = null; sfx('shutdown'); HAudio.duck(.18); toast('Device in standby', 'warn'); logEvt('warn', 'Device in standby'); }
+  evaluate(true); refresh(); renderInspect();
+}
+
+/* ----- inspector ----- */
+function roText(k) {
+  if (k === 'link') return [S.source === 'live' ? 'USB serial' : 'Demo', ''];
+  if (k === 'pw') return [S.power ? 'On' : 'Standby', ''];
+  if (k === 'bat') return [S.bat == null ? 'Not reported' : S.bat, S.bat == null ? '' : '%'];
+  const m = METRICS.find(x => x.k === k); return [valText(k), m.unit];
+}
+function roItem(k, label) { const d = el('div'); d.append(el('small', '', label)); const b = el('b'); b.dataset.ro = k; const [t, u] = roText(k); b.textContent = t; b.append(el('i', '', u)); d.appendChild(b); return d; }
+function updateInspectLive() {
+  const id = S.sel; if (!id) { const o = $('#ovLive'); if (o) o.textContent = overviewLine(); return; }
+  $$('#inspect [data-ro]').forEach(b => { const [t, u] = roText(b.dataset.ro); b.textContent = t; b.append(el('i', '', u)); });
+  const p = $('#insPill'); if (p) { const l = partLevel(id); p.className = 'pill ' + (l === 'none' ? '' : l); p.textContent = l === 'none' ? '' : LVTXT[l]; p.hidden = l === 'none'; }
+}
+const overviewLine = () => (S.power ? 'On' : 'Standby') + ' · ' + (S.source === 'live' ? 'live device' : 'demo data') + ' · ' + S.mode + ' view';
+function formRow(fields, btnTxt, kind) {
+  const f = el('form', 'frm'); f.addEventListener('submit', e => { e.preventDefault(); logManual(kind); });
+  fields.forEach(x => { const l = el('label', '', x[1]), i = el('input'); i.id = x[0]; i.type = 'number'; i.inputMode = 'decimal'; i.step = '1'; i.placeholder = x[2]; l.appendChild(i); f.appendChild(l); });
+  const b = el('button', 'btn', btnTxt); b.type = 'submit'; f.appendChild(b); return f;
+}
+function renderInspect() {
+  const box = $('#inspect'); box.textContent = ''; const id = S.sel;
+  if (!id) {
+    const h = el('div', 'ins-h'), l = el('div'); l.append(el('div', 'ins-tag', 'RIY3.0 Hive'), el('h3', '', 'Dr. X Smart Health Assistant')); h.appendChild(l); box.appendChild(h);
+    box.appendChild(el('p', 'ins-p', 'An ESP32-based health station with infrared temperature, pulse oximetry, a blood pressure cuff and a glucose meter. Pick a component to see how it works, what it reads and how it connects.'));
+    const d = el('dl', 'spec'); [['Status', ''], ['Sensors', 'MLX90614, MAX30102, BP cuff, glucose meter'], ['Controller', 'ESP32 (I²C bus: 0x3C OLED, 0x57 MAX30102, 0x5A MLX90614)'], ['Data', S.source === 'live' ? 'Live device readings' : 'Simulated demo data, shown with a DEMO tag']].forEach(r => { const dt = el('dt', '', r[0]), dd = el('dd', '', r[1]); if (r[0] === 'Status') dd.id = 'ovLive', dd.textContent = overviewLine(); d.append(dt, dd); }); box.appendChild(d);
+    const a = el('div', 'acts'), b1 = el('button', 'btn', 'Open the case'); b1.type = 'button'; b1.dataset.nosound = '1'; b1.addEventListener('click', () => setMode('internals'));
+    const b2 = el('button', 'btn ghost', 'Ask Dr. X AI'); b2.type = 'button'; b2.addEventListener('click', () => { showTab('ai'); $('#aiText').focus(); }); a.append(b1, b2); box.appendChild(a);
+    box.appendChild(el('p', 'note', 'Tip: use the four view modes to see the shell, internals, an X-ray of the case and the signal flow on the I²C bus.')); return;
+  }
+  const P = PARTS[id], h = el('div', 'ins-h'), l = el('div'); l.append(el('div', 'ins-tag', P.tag + (P.internal ? ' · inside the case' : '')), el('h3', '', P.name));
+  const pill = el('span', 'pill', ''); pill.id = 'insPill'; h.append(l, pill); box.appendChild(h); box.appendChild(el('p', 'ins-p', P.blurb));
+  const ro = el('div', 'ro');
+  if (P.metric) P.metric.forEach(k => ro.appendChild(roItem(k, METRICS.find(m => m.k === k).label)));
+  if (id === 'esp32') { ro.appendChild(roItem('link', 'Data link')); ro.appendChild(roItem('pw', 'Power')); }
+  if (id === 'battery') ro.appendChild(roItem('bat', 'Charge'));
+  if (ro.children.length) box.appendChild(ro);
+  const d = el('dl', 'spec'); P.specs.forEach(r => d.append(el('dt', '', r[0]), el('dd', '', r[1]))); box.appendChild(d);
+  if (id === 'cuff') {
+    const run = S.bpRun, a = el('div', 'acts'), b = el('button', 'btn', run ? 'Measuring…' : S.source === 'live' ? 'Request measurement' : 'Start demo measurement'); b.type = 'button'; b.id = 'btnBP'; b.dataset.nosound = '1'; b.disabled = !!run; b.addEventListener('click', startBP); a.appendChild(b); box.appendChild(a);
+    if (run && run !== 'wait') { const bar = el('div', 'bar'), i = el('i'); i.id = 'bpBar'; bar.appendChild(i); const t = el('div', 'age'); t.id = 'bpTxt'; box.append(bar, t); }
+    box.appendChild(el('p', 'note', S.source === 'live' ? 'Sends {"cmd":"bp"} to the device and waits for sys and dia in its reply.' : 'In demo mode the cuff inflates in the 3D view and returns a simulated reading for the current scenario.'));
+    box.appendChild(formRow([['inSys', 'Systolic', '120'], ['inDia', 'Diastolic', '80']], 'Log reading', 'bp'));
+  }
+  if (id === 'glucose') box.appendChild(formRow([['inGlu', 'mg/dL', '98']], 'Log reading', 'glu'));
+  const a = el('div', 'acts');
+  if (id === 'buzzer') { const b = el('button', 'btn', 'Test buzzer'); b.type = 'button'; b.dataset.nosound = '1'; b.addEventListener('click', () => sfx('buzzer', Scene3D.worldPos('buzzer'))); a.appendChild(b); }
+  if (id === 'power') { const b = el('button', 'btn', S.power ? 'Switch to standby' : 'Switch on'); b.type = 'button'; b.dataset.nosound = '1'; b.addEventListener('click', () => setPower(!S.power)); a.appendChild(b); }
+  if (P.ask) { const b = el('button', 'btn ghost', 'Ask AI about this'); b.type = 'button'; b.dataset.nosound = '1'; b.addEventListener('click', () => { showTab('ai'); ask(P.ask); }); a.appendChild(b); }
+  const c = el('button', 'btn ghost', 'Close'); c.type = 'button'; c.addEventListener('click', () => select(null)); a.appendChild(c); box.appendChild(a);
+  updateInspectLive();
+}
+
+/* ----- AI layer: calls the real runtime model, never fabricates output ----- */
+const AI = { sample: null, busy: false, ctrl: null, turns: [], checked: false };
+const AI_PRE = `You are Dr. X AI, the assistant inside RIY3.0 Hive, a 3D control panel for a smart health station (ESP32, MAX30102 pulse oximeter, MLX90614 infrared thermometer, oscillometric BP cuff, strip glucose meter, SSD1306 OLED).
+Rules:
+- Use only the JSON context below. Never invent readings and never claim you measured anything yourself.
+- If dataSource says demo, the numbers are simulated by the page. Say so in your first sentence.
+- You are not a doctor and you do not diagnose. For values flagged "warn" suggest re-measuring and, if it persists or symptoms exist, contacting a clinician. For "crit" advise urgent medical advice.
+- Trends come from a short window (see windowStats.spanSec). State that limits what you can predict, and do not predict beyond what the numbers support.
+- For hardware questions rely on componentSheet and general electronics knowledge; say when something is not specified.
+- At most 170 words. Short bullet points. Plain text; **bold** is allowed.`;
+const AI_QS = [['Analyze vitals', 'Review the current readings and recent trends. Flag anything outside the rule thresholds and suggest what to check next.'],
+  ['Predict trend', 'From the history window, say which way each metric is heading over the next few minutes and what could explain it. Be explicit about how limited a short window is.'],
+  ['Explain selection', null], ['Check I²C bus', 'Check the I²C bus using the component sheet: addresses, conflicts, pull-ups and supply levels. Note anything missing from the sheet.']];
+function seriesStats(k) {
+  const a = S.hist[k]; if (!a.length) return null; const vs = a.map(x => x.v), n = vs.length, mean = vs.reduce((s, x) => s + x, 0) / n, t0 = a[0].t;
+  let sx = 0, sy = 0, sxy = 0, sxx = 0; a.forEach(p => { const x = (p.t - t0) / 60000; sx += x; sy += p.v; sxy += x * p.v; sxx += x * x; });
+  const den = n * sxx - sx * sx, slope = den > 1e-9 ? (n * sxy - sx * sy) / den : 0, r = (x) => Math.round(x * 100) / 100;
+  return { samples: n, min: r(Math.min(...vs)), max: r(Math.max(...vs)), mean: r(mean), last: r(vs[n - 1]), slopePerMin: r(slope), spanSec: Math.round((a[n - 1].t - t0) / 1000) };
+}
+function buildContext() {
+  const latest = {}, win = {};
+  METRICS.forEach(m => {
+    if (!hasV(m.k)) { latest[m.k] = null; return; }
+    const v = S.v[m.k]; latest[m.k] = { value: m.k === 'bp' ? v.sys + '/' + v.dia : Math.round(v.val * 10) / 10, unit: m.unit, source: v.src, ageSec: Math.round((Date.now() - v.ts) / 1000), level: S.lv[m.k] };
+    win[m.k] = seriesStats(m.k);
+  });
+  const sel = S.sel ? { id: S.sel, name: PARTS[S.sel].name, blurb: PARTS[S.sel].blurb, specs: PARTS[S.sel].specs } : null;
+  return {
+    device: 'Dr. X Smart Health Assistant', dataSource: S.source === 'live' ? 'live device over USB serial' : 'demo: simulated by the page, scenario "' + SCEN[S.scen].label + '"', devicePower: S.power ? 'on' : 'standby',
+    latest, windowStats: win, batteryPercent: S.bat, view: S.mode, selectedComponent: sel,
+    ruleThresholds: 'warn/crit: temp >=37.8/39 or <36/35 C; HR >110/130 or <50/45; SpO2 <94/90; BP sys >=140/180 or dia >=90/120 or sys<90/80; glucose >180/300 or <70/54 mg/dL',
+    componentSheet: PART_ORDER.map(id => ({ id, name: PARTS[id].name, specs: PARTS[id].specs.map(s => s.join(': ')).join('; ') }))
+  };
+}
+function inline(p, s) { s.split(/(\*\*[^*]+\*\*)/g).forEach(x => { if (/^\*\*[^*]+\*\*$/.test(x)) p.appendChild(el('b', '', x.slice(2, -2))); else if (x) p.appendChild(document.createTextNode(x)); }); }
+function renderMd(box, text) {
+  box.textContent = ''; let ul = null;
+  text.split('\n').forEach(l => {
+    const t = l.trim(); if (!t) { ul = null; return; } const m = t.match(/^[-*•]\s+(.*)/);
+    if (m) { if (!ul) { ul = el('ul'); box.appendChild(ul); } const li = el('li'); inline(li, m[1]); ul.appendChild(li); }
+    else { ul = null; const h = t.match(/^#{1,4}\s+(.*)/), p = el('p'); if (h) { const b = el('b'); inline(b, h[1]); p.appendChild(b); } else inline(p, t); box.appendChild(p); }
+  });
+}
+function aiMsg(kind, head) { const m = el('div', 'msg ' + kind), h = el('div', 'mh'); h.append(el('span', '', head), el('span', '', fmtT(new Date()))); const b = el('div', 'mb'); m.append(h, b); $('#aiLog').appendChild(m); scrollAI(); return { m, b }; }
+const scrollAI = () => { const s = $('#aiScroll'); s.scrollTop = s.scrollHeight; };
+function aiSetBusy(b) {
+  AI.busy = b; $('#aiSend').hidden = b; $('#aiStop').hidden = !b; $('#aiText').disabled = b || !AI.sample; $$('#aiQs button').forEach(x => x.disabled = b || !AI.sample);
+  HAudio.mood(b ? MOOD[S.mode] + 900 : MOOD[S.mode]);
+}
+function aiState() {
+  const ok = !!AI.sample; $('#aiDot').style.cssText = 'background:' + (ok ? 'var(--ok)' : 'var(--crit)') + ';color:' + (ok ? 'var(--ok)' : 'var(--crit)');
+  $('#aiStat').textContent = ok ? 'Claude · live, grounded in Hive data' : (AI.checked ? 'AI unavailable in this view' : 'Checking AI link…');
+  $$('#aiQs button').forEach(x => x.disabled = !ok); $('#aiText').disabled = !ok; $('#aiSend').disabled = !ok;
+  if (AI.checked && !ok && !$('#aiLog').children.length) { const x = aiMsg('err', 'Dr. X AI'); x.b.appendChild(el('p', '', 'The AI layer talks to Claude through the claude.ai viewer, and that link is not available here. Open this page from claude.ai while signed in. Rule-based range checks keep working without it.')); }
+}
+async function initAI() {
+  try { const c = window.claude; if (c && c.use) AI.sample = (await Promise.race([c.use('sample'), new Promise(r => setTimeout(() => r(null), 4000))])) || null; } catch (e) { AI.sample = null; }
+  AI.checked = true; aiState();
+}
+async function ask(q) {
+  q = (q || '').trim(); if (!q || AI.busy) return; if (!AI.sample) { toast('AI is not available in this view.', 'err'); sfx('error'); return; }
+  showTab('ai'); aiSetBusy(true); sfx('aiOn');
+  const u = aiMsg('u', 'You'); u.b.textContent = q; const a = aiMsg('', 'Dr. X AI'), th = el('span', 'think'); th.append(el('i'), el('i'), el('i'), document.createTextNode(' reading ' + Object.values(S.hist).reduce((s, x) => s + x.length, 0) + ' samples')); a.b.appendChild(th);
+  const ctx = buildContext(), hist = AI.turns.slice(-2).map(t => 'User: ' + t.q + '\nAssistant: ' + t.a.slice(0, 500)).join('\n\n');
+  const prompt = AI_PRE + '\n\nCONTEXT:\n' + JSON.stringify(ctx) + (hist ? '\n\nEARLIER IN THIS CHAT:\n' + hist : '') + '\n\nQUESTION:\n' + q;
+  const ctrl = new AbortController(); AI.ctrl = ctrl; $('#aiText').value = '';
+  try {
+    const res = await AI.sample(prompt, { cache: false, modelTier: 'default', signal: ctrl.signal, onText: (x) => { renderMd(a.b, x.text); scrollAI(); } });
+    renderMd(a.b, res.text || ''); AI.turns.push({ q, a: res.text || '' });
+    a.b.appendChild(el('div', 'ctx', 'Grounded in ' + (ctx.windowStats ? Object.values(ctx.windowStats).filter(Boolean).reduce((s, x) => s + x.samples, 0) : 0) + ' samples · ' + (S.source === 'live' ? 'live device' : 'DEMO data') + (res.truncated ? ' · answer was cut short' : '')));
+    sfx('aiDone'); logEvt('sys', 'AI answered: ' + q.slice(0, 60));
+  } catch (e) {
+    a.m.classList.add('err');
+    if (ctrl.signal.aborted) { a.b.textContent = 'Stopped.'; }
+    else {
+      const code = e && e.code, msg = code === 'not_granted' ? 'Permission to ask Claude was declined. You can allow it from the page permissions and try again.' : code === 'rate_limited' ? 'Too many requests right now. Wait a moment and try again.' : 'The request failed' + (e && e.message ? ': ' + e.message : '.');
+      a.b.textContent = (e && e.text ? e.text + '\n\n' : '') ? '' : ''; renderMd(a.b, (e && e.text ? e.text + '\n\n' : '') + msg); sfx('error'); logEvt('err', 'AI request failed (' + (code || 'error') + ')');
+      if (code === 'not_granted') { AI.sample = null; aiState(); }
+    }
+  } finally { AI.ctrl = null; aiSetBusy(false); scrollAI(); }
+}
+function buildAI() {
+  const qs = $('#aiQs');
+  AI_QS.forEach(([lab, q]) => { const b = el('button', '', lab); b.type = 'button'; b.dataset.nosound = '1'; b.disabled = true; b.addEventListener('click', () => ask(q || (S.sel ? PARTS[S.sel].ask || ('Explain the ' + PARTS[S.sel].name + ' and how it fits in this device.') : 'Explain how the sensors, ESP32 and displays work together to produce the readings.'))); qs.appendChild(b); });
+  $('#aiForm').addEventListener('submit', e => { e.preventDefault(); ask($('#aiText').value); });
+  $('#aiStop').addEventListener('click', () => AI.ctrl && AI.ctrl.abort());
+  $('#aiText').disabled = true; $('#aiSend').disabled = true;
+}
+
+/* ----- audio UI ----- */
+function buildAudioUI() {
+  const V = HAudio.vol, map = [['vMaster', 'oMaster', 'master'], ['vMusic', 'oMusic', 'music'], ['vFx', 'oFx', 'fx']];
+  map.forEach(([i, o, k]) => { const r = $('#' + i), out = $('#' + o); r.value = Math.round(V[k] * 100); out.textContent = r.value + '%';
+    r.addEventListener('input', () => { V[k] = r.value / 100; out.textContent = r.value + '%'; HAudio.apply(); HAudio.save(); });
+    r.addEventListener('change', () => sfx('click')); });
+  const mute = $('#vMute'), beat = $('#vBeat'); mute.checked = V.mute; beat.checked = V.beat;
+  mute.addEventListener('change', () => setMute(mute.checked)); beat.addEventListener('change', () => { V.beat = beat.checked; HAudio.save(); });
+  paintMute();
+}
+function paintMute() { const m = HAudio.vol.mute; $('#btnAudio').classList.toggle('off', m); $('#spkWave').style.display = m ? 'none' : ''; $('#vMute').checked = m; $('#btnAudio').setAttribute('aria-label', m ? 'Sound settings (muted)' : 'Sound settings'); }
+async function setMute(m) {
+  HAudio.vol.mute = m; HAudio.save(); HAudio.apply(); paintMute();
+  if (!m) { const ok = await HAudio.resume(); if (ok) { HAudio.startAmbient(); sfx('click'); } else $('#audNote').textContent = 'Audio is not available in this browser or view.'; }
+}
+
+/* ----- layout ----- */
+function layoutInsets() {
+  if (!Scene3D.ok) return; const app = $('#app').getBoundingClientRect(), top = $('.top').getBoundingClientRect().bottom - app.top + 6; let bot, dx = 0;
+  if (isDesk()) {
+    bot = app.height - ($('#sec-vitals').getBoundingClientRect().top - app.top) + 6;
+    const l = $('#sec-parts').getBoundingClientRect().right - app.left, r = $('#rightPanel').getBoundingClientRect().left - app.left; dx = ((l + r) / 2) - app.width / 2;
+  } else { const s = $(SECS[tab]), sh = s.getBoundingClientRect(); bot = app.height - (sh.top - app.top) + 4; }
+  Scene3D.setInsets(top, Math.max(0, bot), dx);
+}
+function updateTag() {
+  const t = $('#tag'); if (!S.sel || !Scene3D.ok) { t.hidden = true; return; }
+  const p = Scene3D.project(S.sel), w = $('#gl').clientWidth, h = $('#gl').clientHeight;
+  if (!p || p.x < 0 || p.y < 0 || p.x > w || p.y > h) { t.hidden = true; return; }
+  t.hidden = false; t.textContent = PARTS[S.sel].name; t.style.left = p.x + 'px'; t.style.top = p.y + 'px';
+}
+
+/* ----- wiring ----- */
+function wire() {
+  $$('.modes button').forEach(b => { b.dataset.nosound = '1'; b.addEventListener('click', () => setMode(b.dataset.mode)); });
+  $$('[data-tab]').forEach(b => { b.addEventListener('click', () => showTab(b.dataset.tab)); });
+  for (const b in POPS) $('#' + b).addEventListener('click', () => togglePop(b));
+  document.addEventListener('pointerdown', e => { if (!e.target.closest('.pop') && !e.target.closest('#btnSrc,#btnAudio,#btnHelp')) closePops(); });
+  $('#btnPower').dataset.nosound = '1'; $('#btnPower').addEventListener('click', () => setPower(!S.power));
+  $('#logClear').addEventListener('click', () => { S.log = []; renderLog(); });
+  $('#btnLink').addEventListener('click', connectSerial); $('#btnUnlink').addEventListener('click', async () => { await dropSerial(); setSource('demo'); toast('Device disconnected. Back to demo data.', 'ok'); });
+  $('#scn').addEventListener('change', e => { S.scen = e.target.value; if (S.source === 'demo') { const sc = SCEN[S.scen]; setBPGlu(sc.sys, sc.dia, sc.glu, 'demo'); logEvt('sys', 'Demo scenario: ' + sc.label); evaluate(); refresh(); sfx('mode'); } });
+  $('#vcReset').addEventListener('click', () => { Scene3D.resetView(S.mode); select(null, { silent: true }); });
+  const spin = $('#vcSpin'); spin.addEventListener('click', () => { Scene3D.setSpin(!Scene3D.spin); spin.setAttribute('aria-pressed', String(Scene3D.spin)); });
+  $('#vcIn').addEventListener('click', () => Scene3D.zoom(.8)); $('#vcOut').addEventListener('click', () => Scene3D.zoom(1.25));
+  document.addEventListener('click', e => { const b = e.target.closest('button,[role="button"],[role="radio"]'); if (b && !b.dataset.nosound && !b.closest('#boot')) sfx('click'); });
+  document.addEventListener('mouseover', e => { const b = e.target.closest('.modes button,#partList button,.tile'); if (b && !b.contains(e.relatedTarget)) sfx('hover'); });
+  document.addEventListener('keydown', e => {
+    const tg = e.target, typing = tg.matches && tg.matches('input,textarea,select');
+    if (e.key === 'Escape') { closePops(); if (!typing) select(null); return; }
+    if (typing || e.ctrlKey || e.metaKey || e.altKey || !$('#boot').classList.contains('gone')) return;
+    const k = e.key.toLowerCase();
+    if ('1234'.includes(k) && k) setMode(['exterior', 'internals', 'xray', 'signal'][+k - 1]);
+    else if (k === '0') $('#vcReset').click(); else if (k === 'r') spin.click(); else if (k === 'm') setMute(!HAudio.vol.mute);
+    else if (k === '+' || k === '=') Scene3D.zoom(.85); else if (k === '-') Scene3D.zoom(1.18);
+    else if (tg.id === 'gl') {
+      if (k === 'arrowleft') Scene3D.rotate(-28, 0); else if (k === 'arrowright') Scene3D.rotate(28, 0); else if (k === 'arrowup') Scene3D.rotate(0, -28); else if (k === 'arrowdown') Scene3D.rotate(0, 28);
+      else if (k === 'enter') { const i = PART_ORDER.indexOf(S.sel); select(PART_ORDER[(i + 1) % PART_ORDER.length], { focus: true }); } else return;
+    } else return;
+    e.preventDefault();
+  });
+  const mq = matchMedia('(min-width:901px)'); (mq.addEventListener ? mq.addEventListener('change', () => showTab(tab)) : mq.addListener(() => showTab(tab)));
+  new ResizeObserver(() => { Scene3D.resize(); layoutInsets(); }).observe($('#app'));
+}
+function sceneHooks() {
+  const tip = $('#tip');
+  return {
+    onPick: (id) => { if (id) select(id, { focus: true }); else if (S.sel) select(null); },
+    onHover: (id, x, y, isScr) => {
+      if (!id) { tip.hidden = true; return; } const a = $('#app').getBoundingClientRect();
+      tip.hidden = false; tip.textContent = PARTS[id].name; tip.style.left = (x - a.left) + 'px'; tip.style.top = (y - a.top) + 'px';
+      if (tip.dataset.id !== id) { tip.dataset.id = id; sfx('hover', Scene3D.worldPos(id)); }
+    },
+    onTip: () => { tip.hidden = true; },
+    onScreenBtn: (b) => { sfx('click', Scene3D.worldPos('screen')); if (b === 'ai') { showTab('ai'); $('#aiText').focus(); } else if (b === 'rec') showTab('log'); else togglePop('btnSrc'); },
+    onBeat: () => { if (HAudio.vol.beat && S.power) sfx('beat', Scene3D.worldPos('max30102')); }
+  };
+}
+
+/* ----- boot ----- */
+const wait = (ms) => new Promise(r => setTimeout(r, ms));
+const paint = () => new Promise(r => requestAnimationFrame(() => setTimeout(r, 16)));
+async function boot() {
+  const log = $('#bootlog'), prog = $('#bprog'); const steps = []; let n = 0;
+  const step = async (label, fn, total) => { const li = el('li', 'cur', label); log.appendChild(li); await paint(); try { await fn(); } catch (e) { li.textContent = label + ' (failed)'; console.error(e); } li.className = 'done'; prog.style.width = Math.round(++n / total * 100) + '%'; };
+  const T = 5;
+  buildParts(); buildTiles(); buildAI(); buildAudioUI(); wire(); renderLog();
+  await step('Loading typography', () => Promise.race([document.fonts ? document.fonts.ready : 0, wait(1500)]), T);
+  await step('Building the Dr. X model, lighting and reflections', async () => {
+    if (typeof THREE === 'undefined') throw new Error('three.js unavailable');
+    const ok = Scene3D.init($('#gl'), sceneHooks());
+    if (!ok) throw new Error('WebGL unavailable');
+  }, T);
+  if (!Scene3D.ok) { const m = el('div', 'nogl'); m.appendChild(el('p', '', '3D view unavailable: this browser could not start WebGL. Vitals, the component list, the log and AI still work.')); $('#app').insertBefore(m, $('.vignette')); }
+  await step('Preparing demo telemetry', () => { seedDemo(); evaluate(true); updateSrcUI(); }, T);
+  await step('Linking the AI layer', initAI, T);
+  await step('Syncing interface', () => { showTab(isDesk() ? 'inspect' : 'vitals'); renderInspect(); refresh(); layoutInsets(); }, T);
+  prog.style.width = '100%'; $('#bootbtn').classList.add('show'); $('#enter').focus();
+  requestAnimationFrame(frame); setInterval(tick, 1000);
+}
+async function enter(sound) {
+  if (sound) {
+    const ok = await HAudio.resume(); if (ok) { HAudio.apply(); HAudio.startAmbient(); HAudio.mood(MOOD[S.mode]); sfx('startup'); } else $('#audNote').textContent = 'Audio is not available in this browser or view.';
+  } else { HAudio.vol.mute = true; HAudio.apply(); paintMute(); }
+  $('#boot').classList.add('gone'); setTimeout(() => { $('#boot').hidden = true; layoutInsets(); }, 1000);
+  logEvt('sys', 'Session started' + (sound ? '' : ' without sound')); $('#gl').focus({ preventScroll: true });
+}
+let lastT = performance.now(), fcount = 0;
+function frame(now) {
+  requestAnimationFrame(frame); const dt = Math.min(.05, (now - lastT) / 1000); lastT = now;
+  try {
+    stepBP(now); Scene3D.update(dt, now); if (HAudio.ready && Scene3D.ok) HAudio.listener(Scene3D.camera); updateTag();
+    if (++fcount % 30 === 0) { $$('.tile .age').forEach((a, i) => a.textContent = ageText(METRICS[i].k)); }
+  } catch (e) { if (!frame.warned) { frame.warned = 1; console.error(e); } }
+}
+$('#enter').addEventListener('click', () => enter(true)); $('#enterQuiet').addEventListener('click', () => enter(false));
+boot();
+</script>
+
+</body></html>
